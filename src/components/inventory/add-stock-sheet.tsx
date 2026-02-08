@@ -67,7 +67,7 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(
       createFormSchema(selectedProduct?.isSerialized || false),
-    ),
+    ) as any,
     defaultValues: {
       productId: "",
       quantity: 1,

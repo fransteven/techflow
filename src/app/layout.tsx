@@ -23,12 +23,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
-        <div className="flex min-h-screen w-full bg-muted/40">
-          <Sidebar />
-          <div className="flex flex-col flex-1">
-            <Navbar />
-            <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
-          </div>
+        <div className="flex min-h-screen w-full bg-background text-foreground">
+          {children}
         </div>
         <Toaster />
       </body>

@@ -43,7 +43,7 @@ interface CreateExpenseModalProps {
 export function CreateExpenseModal({ categories }: CreateExpenseModalProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<CreateExpenseInput>({
-    resolver: zodResolver(createExpenseSchema),
+    resolver: zodResolver(createExpenseSchema) as any,
     defaultValues: {
       amount: 0,
       description: "",

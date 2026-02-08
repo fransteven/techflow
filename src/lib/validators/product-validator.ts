@@ -6,7 +6,7 @@ export const productSchema = z.object({
   price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
     message: "Price must be a valid positive number",
   }),
-  isSerialized: z.boolean().default(false),
+  isSerialized: z.boolean(),
 });
 
 export type ProductInput = z.infer<typeof productSchema>;
