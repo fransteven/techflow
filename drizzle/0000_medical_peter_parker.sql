@@ -1,0 +1,1 @@
+-- 0000 intentionally empty. Database already contains these tables.
