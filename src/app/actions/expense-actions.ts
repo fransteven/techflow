@@ -10,15 +10,13 @@ import { auth } from "@/lib/auth"; // Assuming auth is exported from here
 import { headers } from "next/headers";
 
 export async function createExpenseAction(data: unknown) {
-  /**
-   * const session = await auth.api.getSession({
+  const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
-   */
 
   const result = createExpenseSchema.safeParse(data);
 
@@ -29,7 +27,7 @@ export async function createExpenseAction(data: unknown) {
   try {
     await expenseService.createExpense({
       ...result.data,
-      userId: "1",
+      userId: session.user.id,
     });
     revalidatePath("/expenses");
     return { success: true };
@@ -40,15 +38,13 @@ export async function createExpenseAction(data: unknown) {
 }
 
 export async function createExpenseCategoryAction(data: unknown) {
-  /**
-   * const session = await auth.api.getSession({
+  const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   if (!session?.user) {
     return { success: false, error: "Unauthorized" };
   }
-   */
 
   const result = createExpenseCategorySchema.safeParse(data);
 
