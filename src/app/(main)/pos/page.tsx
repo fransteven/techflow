@@ -19,6 +19,7 @@ interface CartItem {
   isSerialized: boolean;
   quantity: number;
   unitCost: number;
+  availableQty?: number; // Track available quantity for validation
 }
 
 export default function PosPage() {
@@ -44,12 +45,30 @@ export default function PosPage() {
       );
 
       if (existing) {
+        // Check if adding one more would exceed available quantity
+        const newQuantity = existing.quantity + 1;
+        if (
+          item.availableQty !== undefined &&
+          newQuantity > item.availableQty
+        ) {
+          toast.error(
+            `Stock insuficiente. Disponible: ${item.availableQty}, en carrito: ${existing.quantity}`,
+          );
+          return prev;
+        }
+
         toast.success(`Cantidad de ${item.name} actualizada`);
         return prev.map((p) =>
           p.productId === item.productId && p.price === item.price
-            ? { ...p, quantity: p.quantity + 1 }
+            ? { ...p, quantity: newQuantity }
             : p,
         );
+      }
+
+      // Adding new item - check if available quantity is sufficient
+      if (item.availableQty !== undefined && item.availableQty < 1) {
+        toast.error(`${item.name} no tiene stock disponible`);
+        return prev;
       }
 
       toast.success(`${item.name} añadido`);

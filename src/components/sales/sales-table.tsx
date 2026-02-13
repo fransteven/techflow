@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Eye } from "lucide-react";
+import { SaleDetailsModal } from "./sale-details-modal";
 
 interface Sale {
   id: string;
@@ -34,57 +36,84 @@ interface SalesTableProps {
   data: Sale[];
 }
 
-export const columns: ColumnDef<Sale>[] = [
-  {
-    accessorKey: "date",
-    header: "Fecha",
-    cell: ({ row }) => {
-      return format(new Date(row.getValue("date")), "PPP p", { locale: es });
-    },
-  },
-  {
-    accessorKey: "id",
-    header: "ID Venta",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.getValue("id")}</span>
-    ),
-  },
-  {
-    accessorKey: "userName",
-    header: "Vendedor",
-    cell: ({ row }) => row.getValue("userName") || "Sistema",
-  },
-  {
-    accessorKey: "status",
-    header: "Estado",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string;
-      return (
-        <span
-          className={`capitalize ${status === "completed" ? "text-green-600" : "text-yellow-600"}`}
-        >
-          {status === "completed" ? "Completada" : status}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "totalAmount",
-    header: "Total",
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("totalAmount"));
-      const formatted = new Intl.NumberFormat("es-CO", {
-        style: "currency",
-        currency: "COP",
-      }).format(amount);
-
-      return <div className="font-medium">{formatted}</div>;
-    },
-  },
-];
-
 export function SalesTable({ data }: SalesTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenDetails = (saleId: string) => {
+    setSelectedSaleId(saleId);
+    setIsModalOpen(true);
+  };
+
+  const columns = useMemo<ColumnDef<Sale>[]>(
+    () => [
+      {
+        accessorKey: "date",
+        header: "Fecha",
+        cell: ({ row }) => {
+          return format(new Date(row.getValue("date")), "PPP p", {
+            locale: es,
+          });
+        },
+      },
+      {
+        accessorKey: "id",
+        header: "ID Venta",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.getValue("id")}</span>
+        ),
+      },
+      {
+        accessorKey: "userName",
+        header: "Vendedor",
+        cell: ({ row }) => row.getValue("userName") || "Sistema",
+      },
+      {
+        accessorKey: "status",
+        header: "Estado",
+        cell: ({ row }) => {
+          const status = row.getValue("status") as string;
+          return (
+            <span
+              className={`capitalize ${status === "completed" ? "text-green-600" : "text-yellow-600"}`}
+            >
+              {status === "completed" ? "Completada" : status}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "Total",
+        cell: ({ row }) => {
+          const amount = parseFloat(row.getValue("totalAmount"));
+          const formatted = new Intl.NumberFormat("es-CO", {
+            style: "currency",
+            currency: "COP",
+          }).format(amount);
+
+          return <div className="font-medium">{formatted}</div>;
+        },
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        cell: ({ row }) => {
+          return (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleOpenDetails(row.original.id)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          );
+        },
+      },
+    ],
+    [],
+  );
 
   const table = useReactTable({
     data,
@@ -176,6 +205,12 @@ export function SalesTable({ data }: SalesTableProps) {
           Siguiente
         </Button>
       </div>
+
+      <SaleDetailsModal
+        saleId={selectedSaleId}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

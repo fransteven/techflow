@@ -19,3 +19,13 @@ export async function getSalesDataAction() {
     return { success: false, error: "Failed to fetch sales data" };
   }
 }
+
+export async function getSaleDetailsAction(saleId: string) {
+  try {
+    const details = await salesService.getSaleDetails(saleId);
+    return { success: true, data: details };
+  } catch (error) {
+    console.error("Error fetching sale details:", error);
+    return { success: false, error: "Failed to fetch sale details" };
+  }
+}

@@ -26,6 +26,7 @@ interface PosProductListProps {
     isSerialized: boolean;
     quantity: number;
     unitCost: number;
+    availableQty?: number;
   }) => void;
 }
 
@@ -68,6 +69,12 @@ export function PosProductList({ onAddToCart }: PosProductListProps) {
       return;
     }
 
+    // Check if product has available stock
+    if (result.availableQty <= 0) {
+      toast.error("Este producto no tiene stock disponible");
+      return;
+    }
+
     if (result.isSerialized && !result.productItemId) {
       toast.error(
         "Debe escanear un serial específico para vender este producto.",
@@ -83,6 +90,7 @@ export function PosProductList({ onAddToCart }: PosProductListProps) {
       isSerialized: result.isSerialized,
       quantity: 1,
       unitCost: result.avgUnitCost,
+      availableQty: result.availableQty,
     });
 
     setResult(null);

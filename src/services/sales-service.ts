@@ -5,6 +5,8 @@ import {
   inventoryMovements,
   expenses,
   user,
+  products,
+  productItems,
 } from "@/db/schema";
 import { sql, desc, and, gte, lte, eq } from "drizzle-orm";
 import { startOfMonth, endOfMonth } from "date-fns";
@@ -64,4 +66,19 @@ export const getSalesKPIs = async () => {
     monthlyInventoryValueSold: Number(cogsResult[0].total),
     monthlyExpenses: Number(expensesResult[0].total),
   };
+};
+
+export const getSaleDetails = async (saleId: string) => {
+  return await db
+    .select({
+      id: saleDetails.id,
+      productName: products.name,
+      price: saleDetails.price,
+      sku: productItems.sku,
+      serialNumber: productItems.serialNumber,
+    })
+    .from(saleDetails)
+    .innerJoin(products, eq(saleDetails.productId, products.id))
+    .leftJoin(productItems, eq(saleDetails.productItemId, productItems.id))
+    .where(eq(saleDetails.saleId, saleId));
 };

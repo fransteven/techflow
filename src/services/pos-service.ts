@@ -151,6 +151,51 @@ export const processSale = async ({
         );
       }
 
+      // STOCK VALIDATION
+      if (item.isSerialized && item.productItemId) {
+        // Validate serialized item exists and is available
+        const [productItem] = await tx
+          .select()
+          .from(productItems)
+          .where(eq(productItems.id, item.productItemId))
+          .limit(1);
+
+        if (!productItem) {
+          throw new Error(
+            `Product item with ID ${item.productItemId} not found`,
+          );
+        }
+
+        if (productItem.status !== "available") {
+          throw new Error(
+            `Product item "${productItem.sku || productItem.serialNumber}" is not available (status: ${productItem.status})`,
+          );
+        }
+      } else {
+        // Validate non-serialized item has sufficient stock
+        const movements = await tx
+          .select({
+            total: sql<string>`SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE -${inventoryMovements.quantity} END)`,
+          })
+          .from(inventoryMovements)
+          .where(eq(inventoryMovements.productId, item.productId));
+
+        const currentStock = Number(movements[0]?.total || 0);
+
+        if (currentStock < item.quantity) {
+          // Get product name for better error message
+          const [product] = await tx
+            .select({ name: products.name })
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          throw new Error(
+            `Insufficient stock for "${product?.name || item.productId}". Available: ${currentStock}, Requested: ${item.quantity}`,
+          );
+        }
+      }
+
       // Insert sale detail
       await tx.insert(saleDetails).values({
         saleId: sale.id,
