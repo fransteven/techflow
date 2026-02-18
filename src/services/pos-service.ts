@@ -171,6 +171,36 @@ export const processSale = async ({
             `Product item "${productItem.sku || productItem.serialNumber}" is not available (status: ${productItem.status})`,
           );
         }
+
+        // MINIMUM PROFIT MARGIN VALIDATION for serialized items
+        // Get the cost from inventory movements for this specific item
+        const costMovement = await tx
+          .select({
+            unitCost: inventoryMovements.unitCost,
+          })
+          .from(inventoryMovements)
+          .where(
+            and(
+              eq(inventoryMovements.productItemId, item.productItemId),
+              eq(inventoryMovements.type, "IN"),
+            ),
+          )
+          .limit(1);
+
+        const itemCost = Number(costMovement[0]?.unitCost || 0);
+        if (item.price < itemCost) {
+          throw new Error(
+            `El precio de venta no puede ser menor al costo del producto. Costo: $${itemCost.toLocaleString()}, Precio ingresado: $${item.price.toLocaleString()}`,
+          );
+        }
+
+        const margin = (item.price - itemCost) / item.price;
+        if (margin < 0.09) {
+          const suggestedPrice = itemCost / 0.9;
+          throw new Error(
+            `El margen de beneficio debe ser al menos del 10%. Precio sugerido mínimo: $${suggestedPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })} (actual: ${(margin * 100).toFixed(2)}%)`,
+          );
+        }
       } else {
         // Validate non-serialized item has sufficient stock
         const movements = await tx
@@ -192,6 +222,49 @@ export const processSale = async ({
 
           throw new Error(
             `Insufficient stock for "${product?.name || item.productId}". Available: ${currentStock}, Requested: ${item.quantity}`,
+          );
+        }
+
+        // MINIMUM PROFIT MARGIN VALIDATION for non-serialized items
+        // Calculate average cost from inventory movements
+        const costData = await tx
+          .select({
+            avgCost: sql<number>`COALESCE(AVG(CAST(${inventoryMovements.unitCost} AS DECIMAL)), 0)`,
+          })
+          .from(inventoryMovements)
+          .where(
+            and(
+              eq(inventoryMovements.productId, item.productId),
+              eq(inventoryMovements.type, "IN"),
+            ),
+          );
+
+        const avgUnitCost = Number(costData[0]?.avgCost || 0);
+        if (item.price < avgUnitCost) {
+          // Get product name for better error message
+          const [product] = await tx
+            .select({ name: products.name })
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          throw new Error(
+            `El precio de venta no puede ser menor al costo del producto "${product?.name || item.productId}". Costo promedio: $${avgUnitCost.toLocaleString()}, Precio ingresado: $${item.price.toLocaleString()}`,
+          );
+        }
+
+        const margin = (item.price - avgUnitCost) / item.price;
+        if (margin < 0.2) {
+          // Get product name for better error message
+          const [product] = await tx
+            .select({ name: products.name })
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          const suggestedPrice = avgUnitCost / 0.8;
+          throw new Error(
+            `El margen de beneficio para "${product?.name || item.productId}" debe ser al menos del 20%. Precio sugerido mínimo: $${suggestedPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })} (actual: ${(margin * 100).toFixed(1)}%)`,
           );
         }
       }

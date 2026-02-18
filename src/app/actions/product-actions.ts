@@ -17,6 +17,9 @@ export async function createProductAction(data: unknown) {
     return { success: true };
   } catch (error) {
     console.error("Error creating product:", error);
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to create product" };
   }
 }

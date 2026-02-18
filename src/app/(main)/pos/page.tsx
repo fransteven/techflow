@@ -35,7 +35,6 @@ export default function PosPage() {
           toast.warning("Este serial ya está en el carrito");
           return prev;
         }
-        toast.success(`${item.name} añadido`);
         return [...prev, item];
       }
 
@@ -57,7 +56,6 @@ export default function PosPage() {
           return prev;
         }
 
-        toast.success(`Cantidad de ${item.name} actualizada`);
         return prev.map((p) =>
           p.productId === item.productId && p.price === item.price
             ? { ...p, quantity: newQuantity }
@@ -71,7 +69,6 @@ export default function PosPage() {
         return prev;
       }
 
-      toast.success(`${item.name} añadido`);
       return [...prev, item];
     });
   };

@@ -1,5 +1,10 @@
 import { db } from "@/db";
-import { products, productItems, inventoryMovements } from "@/db/schema";
+import {
+  products,
+  productItems,
+  inventoryMovements,
+  categories,
+} from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { ProductInput } from "@/lib/validators/product-validator";
 
@@ -40,8 +45,11 @@ export const getProducts = async () => {
           )
         END
       `.mapWith(Number),
+      categoryName: categories.name,
+      attributes: products.attributes,
     })
     .from(products)
+    .leftJoin(categories, eq(products.categoryId, categories.id))
     .orderBy(desc(products.createdAt));
 };
 
@@ -52,6 +60,16 @@ export const getProductById = async (id: string) => {
 };
 
 export const createProduct = async (data: ProductInput) => {
+  const existingProduct = await db
+    .select()
+    .from(products)
+    .where(sql`LOWER(${products.name}) = LOWER(${data.name})`)
+    .limit(1);
+
+  if (existingProduct.length > 0) {
+    throw new Error("Ya existe un producto con este nombre.");
+  }
+
   const result = await db.insert(products).values(data).returning();
   return result[0];
 };

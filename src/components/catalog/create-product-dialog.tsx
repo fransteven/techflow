@@ -31,11 +31,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { createProductAction } from "@/app/actions/product-actions";
 import { productSchema } from "@/lib/validators/product-validator";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect, useState } from "react";
 
 export function CreateProductDialog() {
   const [open, setOpen] = useState(false);
+  const [categories, setCategories] = useState<
+    { id: string; name: string; template: any }[]
+  >([]);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (open) {
+      // Fetch categories when dialog opens
+      import("@/app/actions/category-actions").then(
+        ({ getCategoriesAction }) => {
+          getCategoriesAction().then((result) => {
+            if (result.success && result.data) {
+              setCategories(result.data);
+            }
+          });
+        },
+      );
+    }
+  }, [open]);
 
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
@@ -43,9 +68,14 @@ export function CreateProductDialog() {
       name: "",
       description: "",
       price: "0",
+      categoryId: "",
       isSerialized: false,
+      attributes: {},
     },
   });
+
+  const selectedCategoryId = form.watch("categoryId");
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
   function onSubmit(values: z.infer<typeof productSchema>) {
     startTransition(async () => {
@@ -68,7 +98,7 @@ export function CreateProductDialog() {
           Nuevo Producto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear Producto</DialogTitle>
           <DialogDescription>
@@ -90,6 +120,82 @@ export function CreateProductDialog() {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoría</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar categoría" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedCategory &&
+              selectedCategory.template &&
+              (selectedCategory.template as any[]).map((attr: any) => (
+                <FormField
+                  key={attr.key}
+                  control={form.control}
+                  name={`attributes.${attr.key}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{attr.label}</FormLabel>
+                      <FormControl>
+                        {attr.type === "select" ? (
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={`Seleccionar ${attr.label}`}
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {attr.options?.map((opt: string) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : attr.type === "number" ? (
+                          <Input
+                            type="number"
+                            placeholder={attr.label}
+                            {...field}
+                          />
+                        ) : (
+                          <Input placeholder={attr.label} {...field} />
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+
             <FormField
               control={form.control}
               name="description"
@@ -100,6 +206,7 @@ export function CreateProductDialog() {
                     <Textarea
                       placeholder="Descripción detallada..."
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />

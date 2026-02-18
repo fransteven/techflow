@@ -2,6 +2,8 @@ import { getProductsAction } from "@/app/actions/product-actions";
 import { CreateProductDialog } from "@/components/catalog/create-product-dialog";
 import { ProductTable } from "@/components/catalog/product-table";
 
+import { CreateCategoryDialog } from "@/components/catalog/create-category-dialog";
+
 export default async function CatalogPage() {
   const { data: products } = await getProductsAction();
 
@@ -14,7 +16,10 @@ export default async function CatalogPage() {
             Gestiona los productos y categorías disponibles en la tienda.
           </p>
         </div>
-        <CreateProductDialog />
+        <div className="flex items-center gap-2">
+          <CreateCategoryDialog />
+          <CreateProductDialog />
+        </div>
       </div>
       <ProductTable data={products || []} />
     </div>

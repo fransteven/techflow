@@ -45,6 +45,13 @@ export const columns: ColumnDef<ProductWithStock>[] = [
     cell: ({ row }) => <div className="font-bold">{row.getValue("name")}</div>,
   },
   {
+    accessorKey: "categoryName",
+    header: "Categoría",
+    cell: ({ row }) => (
+      <div>{row.getValue("categoryName") || "Sin categoría"}</div>
+    ),
+  },
+  {
     accessorKey: "price",
     header: "Precio",
     cell: ({ row }) => {
