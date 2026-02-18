@@ -15,6 +15,13 @@
       "when": 1770542972370,
       "tag": "0001_loving_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771430744716,
+      "tag": "0002_cheerful_blink",
+      "breakpoints": true
     }
   ]
 }

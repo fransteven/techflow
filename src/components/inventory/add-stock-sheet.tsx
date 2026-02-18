@@ -9,6 +9,8 @@ import { z } from "zod";
 import { receiveStockAction } from "@/app/actions/inventory-actions";
 import { ProductWithStock } from "@/services/product-service";
 
+import { PrintLabelsDialog, PrintData } from "./print-labels-dialog";
+
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -60,46 +62,13 @@ type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
 export function AddStockSheet({ products }: AddStockSheetProps) {
   const [open, setOpen] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printData, setPrintData] = useState<PrintData | null>(null);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductWithStock | null>(null);
   const [imeiCount, setImeiCount] = useState(0);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(
-      createFormSchema(selectedProduct?.isSerialized || false),
-    ) as any,
-    defaultValues: {
-      productId: "",
-      quantity: 1,
-      unitCost: 0,
-      serials: [],
-    },
-  });
-
-  const quantity = form.watch("quantity");
-  const productId = form.watch("productId");
-
-  // Update selected product when productId changes
-  useEffect(() => {
-    if (productId) {
-      const product = products.find((p) => p.id === productId);
-      setSelectedProduct(product || null);
-
-      // Reset serials when product changes
-      form.setValue("serials", []);
-      setImeiCount(0);
-    }
-  }, [productId, products, form]);
-
-  // Update imeiCount when quantity changes (only for serialized products)
-  useEffect(() => {
-    if (selectedProduct?.isSerialized && quantity > 0) {
-      setImeiCount(quantity);
-      // Initialize serials array with empty strings
-      const newSerials = Array(quantity).fill("");
-      form.setValue("serials", newSerials);
-    }
-  }, [quantity, selectedProduct, form]);
+  // ... existing form setup
 
   async function onSubmit(values: FormValues) {
     // Validation for serialized products
@@ -126,6 +95,20 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
         description: `Se agregaron ${values.quantity} unidad(es) al inventario.`,
       });
       setOpen(false);
+
+      // Prepare print data
+      if (result.type === "serialized") {
+        setPrintData({ type: "serialized", items: result.items });
+      } else if (result.type === "generic") {
+        setPrintData({
+          type: "generic",
+          product: result.product,
+          quantity: result.quantity || values.quantity,
+        });
+      }
+
+      setPrintDialogOpen(true);
+
       form.reset();
       setSelectedProduct(null);
       setImeiCount(0);
@@ -137,161 +120,169 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button size="lg">
-          <Plus className="mr-2 h-4 w-4" />
-          Registrar Entrada / Compra
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="flex flex-col overflow-y-auto sm:max-w-lg">
-        <SheetHeader className="space-y-2 pb-4">
-          <SheetTitle>Registrar Entrada / Compra</SheetTitle>
-          <SheetDescription>
-            Registra la entrada de mercancía a la bodega. Los campos se ajustan
-            según el tipo de producto.
-          </SheetDescription>
-        </SheetHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4 py-4"
-          >
-            {/* Paso 1: Selección del Producto */}
-            <FormField
-              control={form.control}
-              name="productId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Producto *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Buscar y seleccionar producto..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                          {product.isSerialized && " (Serializado)"}
-                        </SelectItem>
+    <>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button size="lg">
+            <Plus className="mr-2 h-4 w-4" />
+            Registrar Entrada / Compra
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="flex flex-col overflow-y-auto sm:max-w-lg">
+          <SheetHeader className="space-y-2 pb-4">
+            <SheetTitle>Registrar Entrada / Compra</SheetTitle>
+            <SheetDescription>
+              Registra la entrada de mercancía a la bodega. Los campos se
+              ajustan según el tipo de producto.
+            </SheetDescription>
+          </SheetHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex flex-col gap-4 py-4"
+            >
+              {/* Paso 1: Selección del Producto */}
+              <FormField
+                control={form.control}
+                name="productId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Producto *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Buscar y seleccionar producto..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {products.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name}
+                            {product.isSerialized && " (Serializado)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Paso 2: Inputs Básicos */}
+              {selectedProduct && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cantidad *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Ej: 3"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Número de unidades que están ingresando
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unitCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Costo Unitario *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="$0.00"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Precio de compra por unidad
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Paso 3: Campos Dinámicos de IMEI (Solo para productos serializados) */}
+                  {selectedProduct.isSerialized && imeiCount > 0 && (
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-sm">
+                          Seriales / IMEIs ({imeiCount} requeridos)
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Puede usar el lector de código de barras en cada campo
+                        </p>
+                      </div>
+                      {Array.from({ length: imeiCount }).map((_, index) => (
+                        <FormField
+                          key={index}
+                          control={form.control}
+                          name={`serials.${index}`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>IMEI #{index + 1}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={`Escanear o escribir IMEI #${index + 1}`}
+                                  autoFocus={index === 0}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Paso 2: Inputs Básicos */}
-            {selectedProduct && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cantidad *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="Ej: 3"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Número de unidades que están ingresando
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                    </div>
                   )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="unitCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Costo Unitario *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="$0.00"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Precio de compra por unidad
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Paso 3: Campos Dinámicos de IMEI (Solo para productos serializados) */}
-                {selectedProduct.isSerialized && imeiCount > 0 && (
-                  <div className="space-y-3 border-t pt-4">
-                    <div className="space-y-1">
-                      <h4 className="font-medium text-sm">
-                        Seriales / IMEIs ({imeiCount} requeridos)
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Puede usar el lector de código de barras en cada campo
+                  {/* Info para productos NO serializados */}
+                  {!selectedProduct.isSerialized && (
+                    <div className="rounded-md bg-muted p-3 text-sm">
+                      <p className="text-muted-foreground">
+                        Este producto no requiere seriales. Solo ingrese la
+                        cantidad y el costo unitario.
                       </p>
                     </div>
-                    {Array.from({ length: imeiCount }).map((_, index) => (
-                      <FormField
-                        key={index}
-                        control={form.control}
-                        name={`serials.${index}`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>IMEI #{index + 1}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={`Escanear o escribir IMEI #${index + 1}`}
-                                autoFocus={index === 0}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
+                  )}
+                </>
+              )}
 
-                {/* Info para productos NO serializados */}
-                {!selectedProduct.isSerialized && (
-                  <div className="rounded-md bg-muted p-3 text-sm">
-                    <p className="text-muted-foreground">
-                      Este producto no requiere seriales. Solo ingrese la
-                      cantidad y el costo unitario.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+              <SheetFooter className="pt-4">
+                <Button
+                  type="submit"
+                  disabled={!selectedProduct}
+                  className="w-full"
+                >
+                  Registrar Entrada
+                </Button>
+              </SheetFooter>
+            </form>
+          </Form>
+        </SheetContent>
+      </Sheet>
 
-            <SheetFooter className="pt-4">
-              <Button
-                type="submit"
-                disabled={!selectedProduct}
-                className="w-full"
-              >
-                Registrar Entrada
-              </Button>
-            </SheetFooter>
-          </form>
-        </Form>
-      </SheetContent>
-    </Sheet>
+      <PrintLabelsDialog
+        open={printDialogOpen}
+        onOpenChange={setPrintDialogOpen}
+        data={printData}
+      />
+    </>
   );
 }

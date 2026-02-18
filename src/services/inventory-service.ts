@@ -38,6 +38,7 @@ export const receiveStock = async ({
 
     // 3. Ejecución
     if (product.isSerialized && serials) {
+      const createdItems = [];
       // Caso Serializado
       for (const serial of serials) {
         // Insertar product item
@@ -48,7 +49,12 @@ export const receiveStock = async ({
             serialNumber: serial,
             status: "available",
           })
-          .returning({ id: productItems.id });
+          .returning({
+            id: productItems.id,
+            serialNumber: productItems.serialNumber,
+          });
+
+        createdItems.push(newItem);
 
         // Insertar movimiento de inventario
         await tx.insert(inventoryMovements).values({
@@ -60,6 +66,7 @@ export const receiveStock = async ({
           reason: "Stock Received",
         });
       }
+      return { success: true, type: "serialized", items: createdItems };
     } else {
       // Caso NO Serializado
       await tx.insert(inventoryMovements).values({
@@ -70,9 +77,13 @@ export const receiveStock = async ({
         unitCost: unitCost.toString(),
         reason: "Stock Received",
       });
+      return {
+        success: true,
+        type: "generic",
+        product: { sku: product.sku, name: product.name },
+        quantity,
+      };
     }
-
-    return { success: true };
   });
 };
 

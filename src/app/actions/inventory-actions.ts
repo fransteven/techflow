@@ -9,31 +9,51 @@ import {
 } from "@/services/inventory-service";
 import { receiveStockSchema } from "@/lib/validators/inventory-validator";
 
-export async function receiveStockAction(data: unknown) {
-  const result = receiveStockSchema.safeParse(data);
+type ReceiveStockResult =
+  | { success: false; error: string }
+  | {
+      success: true;
+      message: string;
+      type: "serialized";
+      items: { id: string; serialNumber: string | null }[];
+    }
+  | {
+      success: true;
+      message: string;
+      type: "generic";
+      product: { sku: string | null; name: string };
+      quantity: number;
+    };
 
-  if (!result.success) {
+export async function receiveStockAction(
+  data: unknown,
+): Promise<ReceiveStockResult> {
+  const validationResult = receiveStockSchema.safeParse(data);
+
+  if (!validationResult.success) {
     return {
       success: false,
-      error: result.error.issues[0].message,
+      error: validationResult.error.issues[0].message,
     };
   }
 
   try {
-    await receiveStock({
-      productId: result.data.productId,
-      quantity: result.data.quantity,
-      unitCost: result.data.unitCost,
-      serials: result.data.serials,
+    const result = await receiveStock({
+      productId: validationResult.data.productId,
+      quantity: validationResult.data.quantity,
+      unitCost: validationResult.data.unitCost,
+      serials: validationResult.data.serials,
     });
 
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
 
+    // The result from receiveStock already contains type, items/product/quantity
+    // We just need to cast it or ensure receiveStock returns compatible types
     return {
-      success: true,
       message: "Stock received successfully",
-    };
+      ...result,
+    } as ReceiveStockResult;
   } catch (error) {
     console.error("Error receiving stock:", error);
     return {
