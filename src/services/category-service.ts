@@ -7,6 +7,15 @@ export const getCategories = async () => {
   return await db.select().from(categories).orderBy(desc(categories.name));
 };
 
+export const getCategoryById = async (id: string) => {
+  const result = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, id));
+  if (result.length === 0) return null;
+  return result[0];
+};
+
 export const createCategory = async (data: CategoryInput) => {
   const result = await db.insert(categories).values(data).returning();
   return result[0];

@@ -22,7 +22,11 @@ import type {
 export const searchProduct = async (
   query: string,
 ): Promise<ProductSearchResult | null> => {
-  // 1. Try to find by SKU/Serial in productItems (Serialized items)
+  // Limpiamos el query de posibles saltos de línea o espacios del escáner
+  const cleanQuery = query.trim();
+
+  // 1. INTENTO SERIALIZADO (Precisión Absoluta)
+  // Buscamos si el input corresponde al QR (ID) o al IMEI escrito a mano.
   const itemResult = await db
     .select({
       productItem: productItems,
@@ -31,7 +35,8 @@ export const searchProduct = async (
     .from(productItems)
     .innerJoin(products, eq(productItems.productId, products.id))
     .where(
-      sql`${productItems.sku} = ${query} OR ${productItems.serialNumber} = ${query}`,
+      // Se castea productItems.id a texto para poder compararlo con el string del escáner
+      sql`${productItems.id}::text = ${cleanQuery} OR ${productItems.serialNumber} = ${cleanQuery}`,
     )
     .limit(1);
 
@@ -42,36 +47,33 @@ export const searchProduct = async (
       productItemId: productItem.id,
       name: product.name,
       suggestedPrice: product.price,
-      availableQty: 1, // Specific item found
-      avgUnitCost: 0, // Pending calculation if needed
+      availableQty: 1,
+      avgUnitCost: 0, // Se calcula en processSale
       isSerialized: true,
-      sku: productItem.sku,
+      sku: product.sku, // El SKU de la tabla padre
     };
   }
 
-  // 2. Try to find product by Name (Non-serialized or generalized search)
-  // We prioritize finding non-serialized products here if query matches name
+  // 2. INTENTO NO SERIALIZADO / BÚSQUEDA GENERAL (Precisión Alta -> Precisión Baja)
+  // Buscamos coincidencia exacta de Código de Barras (SKU) o búsqueda manual por Nombre
   const productResult = await db
     .select()
     .from(products)
-    .where(sql`${products.name} ILIKE ${`%${query}%`}`)
+    .where(
+      sql`${products.sku} = ${cleanQuery} OR ${products.name} ILIKE ${`%${cleanQuery}%`}`,
+    )
     .limit(1);
 
   if (productResult.length === 0) {
-    return null;
+    return null; // El producto no existe
   }
 
   const product = productResult[0];
-
-  // Calculate available quantity
   let availableQty = 0;
   let avgUnitCost = 0;
 
   if (product.isSerialized) {
-    // If we found a serialized product by NAME, we can show we found it,
-    // but we can't sell it without a specific serial number.
-    // However, the requested logic implies we want to support finding it.
-    // For now, let's count TOTAL available items of this product type.
+    // Si buscó "iPhone" por nombre, contamos el stock global de la familia
     const availableItems = await db
       .select({ count: sql<string>`COUNT(*)` })
       .from(productItems)
@@ -83,7 +85,7 @@ export const searchProduct = async (
       );
     availableQty = Number(availableItems[0]?.count || 0);
   } else {
-    // Non-serialized: Calculate from inventory movements
+    // Cálculo de stock FIFO para No Serializados
     const movements = await db
       .select({
         total: sql<string>`SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE -${inventoryMovements.quantity} END)`,
@@ -93,7 +95,6 @@ export const searchProduct = async (
 
     availableQty = Number(movements[0]?.total || 0);
 
-    // Calculate avg cost
     const costData = await db
       .select({
         avgCost: sql<number>`COALESCE(AVG(CAST(${inventoryMovements.unitCost} AS DECIMAL)), 0)`,
@@ -110,13 +111,13 @@ export const searchProduct = async (
 
   return {
     productId: product.id,
-    productItemId: null, // Null because we found the generic product, not a specific instance
+    productItemId: null,
     name: product.name,
     suggestedPrice: product.price,
     availableQty,
     avgUnitCost,
     isSerialized: product.isSerialized,
-    sku: null,
+    sku: product.sku,
   };
 };
 

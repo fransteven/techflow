@@ -59,7 +59,7 @@ export const getProductById = async (id: string) => {
   return result[0];
 };
 
-export const createProduct = async (data: ProductInput) => {
+export const createProduct = async (data: ProductInput & { sku?: string }) => {
   const existingProduct = await db
     .select()
     .from(products)

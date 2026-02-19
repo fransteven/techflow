@@ -68,6 +68,18 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
     useState<ProductWithStock | null>(null);
   const [imeiCount, setImeiCount] = useState(0);
 
+  const form = useForm<any>({
+    resolver: zodResolver(
+      createFormSchema(selectedProduct?.isSerialized ?? false),
+    ),
+    defaultValues: {
+      productId: "",
+      quantity: "",
+      unitCost: "",
+      serials: [],
+    },
+  });
+
   // ... existing form setup
 
   async function onSubmit(values: FormValues) {
@@ -149,7 +161,14 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                   <FormItem>
                     <FormLabel>Producto *</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        const product = products.find((p) => p.id === value);
+                        setSelectedProduct(product || null);
+                        setImeiCount(0);
+                        form.setValue("quantity", "");
+                        form.setValue("serials", []);
+                      }}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -186,6 +205,11 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                             min="1"
                             placeholder="Ej: 3"
                             {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const val = parseInt(e.target.value);
+                              setImeiCount(isNaN(val) ? 0 : val);
+                            }}
                           />
                         </FormControl>
                         <FormDescription>
@@ -242,6 +266,7 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                                   placeholder={`Escanear o escribir IMEI #${index + 1}`}
                                   autoFocus={index === 0}
                                   {...field}
+                                  value={field.value || ""}
                                 />
                               </FormControl>
                               <FormMessage />

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { productSchema } from "@/lib/validators/product-validator";
 import * as productService from "@/services/product-service";
+import * as categoryService from "@/services/category-service";
 
 export async function createProductAction(data: unknown) {
   const result = productSchema.safeParse(data);
@@ -12,7 +13,37 @@ export async function createProductAction(data: unknown) {
   }
 
   try {
-    await productService.createProduct(result.data);
+    // 1. Get Category Name
+    let categoryName = "GEN";
+    if (result.data.categoryId) {
+      const category = await categoryService.getCategoryById(
+        result.data.categoryId,
+      );
+      if (category) {
+        categoryName = category.name;
+      }
+    }
+
+    // 2. Generate Base SKU
+    const { generateBaseSKU } = await import("@/lib/utils");
+    const baseSKU = generateBaseSKU(
+      categoryName,
+      result.data.name,
+      result.data.attributes,
+    );
+
+    // 3. Add Unique Suffix (3-4 chars random)
+    // Math.random gives 0.xxxx. toString(36) gives 0.alphanum.
+    // Substring(2, 6) gives 4 chars.
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const finalSKU = `${baseSKU}-${suffix}`;
+
+    // 4. Create Product with SKU
+    await productService.createProduct({
+      ...result.data,
+      sku: finalSKU,
+    });
+
     revalidatePath("/dashboard/catalog");
     return { success: true };
   } catch (error) {

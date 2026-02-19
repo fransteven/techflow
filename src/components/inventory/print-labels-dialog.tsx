@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -50,6 +51,32 @@ export function PrintLabelsDialog({
     window.print();
   };
 
+  const renderLabels = (data: PrintData, copies: number) => {
+    if (data.type === "serialized") {
+      return data.items.map((item) => (
+        <div key={item.id} className="print-item">
+          <ProductLabel
+            type="qr"
+            value={item.id}
+            label="TechFlow"
+            humanReadable={item.serialNumber || item.id.substring(0, 8)}
+          />
+        </div>
+      ));
+    } else {
+      return Array.from({ length: copies }).map((_, i) => (
+        <div key={i} className="print-item">
+          <ProductLabel
+            type="barcode"
+            value={data.product.sku || "NO-SKU"}
+            label={data.product.name}
+            humanReadable={data.product.sku || "NO-SKU"}
+          />
+        </div>
+      ));
+    }
+  };
+
   if (!data) return null;
 
   return (
@@ -80,71 +107,67 @@ export function PrintLabelsDialog({
             </div>
           )}
 
-          <div className="border rounded-md p-4 bg-gray-100 overflow-auto max-h-[300px] print-container">
-            <style jsx global>{`
-              @media print {
-                @page {
-                  size: 50mm 30mm;
-                  margin: 0;
-                }
-                body * {
-                  visibility: hidden;
-                }
-                .print-container,
-                .print-container * {
-                  visibility: visible;
-                }
-                .print-container {
-                  position: fixed;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                  height: 100%;
-                  margin: 0;
-                  padding: 0 !important;
-                  background: white !important;
-                  border: none !important;
-                  overflow: visible !important;
-                }
-                .print-item {
-                  page-break-after: always;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  width: 50mm;
-                  height: 30mm;
-                }
-              }
-            `}</style>
-
-            <div className="flex flex-col gap-4 items-center print-content">
-              {data.type === "serialized"
-                ? // Serialized: Render one label per item
-                  data.items.map((item) => (
-                    <div key={item.id} className="print-item">
-                      <ProductLabel
-                        type="qr"
-                        value={item.id}
-                        label="TechFlow"
-                        humanReadable={
-                          item.serialNumber || item.id.substring(0, 8)
-                        }
-                      />
-                    </div>
-                  ))
-                : // Generic: Render N copies of the same label
-                  Array.from({ length: copies }).map((_, i) => (
-                    <div key={i} className="print-item">
-                      <ProductLabel
-                        type="barcode"
-                        value={data.product.sku || "NO-SKU"}
-                        label={data.product.name}
-                        humanReadable={data.product.sku || "NO-SKU"}
-                      />
-                    </div>
-                  ))}
+          <div className="border rounded-md p-4 bg-gray-100 overflow-auto max-h-[300px]">
+            <p className="text-sm text-muted-foreground mb-2">
+              Vista previa en pantalla (no a escala):
+            </p>
+            <div className="flex flex-col gap-4 items-center bg-white p-4 border w-fit mx-auto">
+              {/* Preview renders here normally */}
+              {renderLabels(data, copies)}
             </div>
           </div>
+
+          {/* Hidden Print Portal */}
+          {open &&
+            createPortal(
+              <div className="print-portal">
+                <style jsx global>{`
+                  @media print {
+                    /* Hide everything in body */
+                    body > * {
+                      display: none !important;
+                    }
+                    /* Show only our portal */
+                    body > .print-portal {
+                      display: block !important;
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      margin: 0;
+                      padding: 0;
+                      background: white;
+                    }
+
+                    @page {
+                      size: 50mm 30mm;
+                      margin: 0;
+                    }
+
+                    .print-item {
+                      page-break-after: always;
+                      break-after: page;
+                      display: flex; /* flex */
+                      justify-content: center;
+                      align-items: center;
+                      width: 50mm;
+                      height: 30mm;
+                      overflow: hidden;
+                    }
+                  }
+
+                  @media screen {
+                    .print-portal {
+                      display: none;
+                    }
+                  }
+                `}</style>
+                <div className="flex flex-col items-start print-content">
+                  {renderLabels(data, copies)}
+                </div>
+              </div>,
+              document.body,
+            )}
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
