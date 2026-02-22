@@ -152,6 +152,9 @@ export const processSale = async ({
         );
       }
 
+      let itemCost = 0;
+      let avgUnitCost = 0;
+
       // STOCK VALIDATION
       if (item.isSerialized && item.productItemId) {
         // Validate serialized item exists and is available
@@ -188,7 +191,7 @@ export const processSale = async ({
           )
           .limit(1);
 
-        const itemCost = Number(costMovement[0]?.unitCost || 0);
+        itemCost = Number(costMovement[0]?.unitCost || 0);
         if (item.price < itemCost) {
           throw new Error(
             `El precio de venta no puede ser menor al costo del producto. Costo: $${itemCost.toLocaleString()}, Precio ingresado: $${item.price.toLocaleString()}`,
@@ -240,7 +243,7 @@ export const processSale = async ({
             ),
           );
 
-        const avgUnitCost = Number(costData[0]?.avgCost || 0);
+        avgUnitCost = Number(costData[0]?.avgCost || 0);
         if (item.price < avgUnitCost) {
           // Get product name for better error message
           const [product] = await tx
@@ -275,6 +278,9 @@ export const processSale = async ({
         saleId: sale.id,
         productId: item.productId,
         productItemId: item.productItemId || null, // Allow null for non-serialized
+        unitCost: item.isSerialized
+          ? itemCost!.toString()
+          : avgUnitCost!.toString(),
         price: item.price.toString(),
       });
 
@@ -292,7 +298,9 @@ export const processSale = async ({
         productId: item.productId,
         type: "OUT",
         quantity: item.quantity,
-        unitCost: item.price.toString(), // Approximated as sale price for now or needs COGS logic
+        unitCost: item.isSerialized
+          ? itemCost!.toString()
+          : avgUnitCost!.toString(), // Using actual cost instead of sale price
         reason: `Sale #${sale.id}`,
       });
     }

@@ -6,7 +6,7 @@ import {
   sales,
   saleDetails,
 } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, or, ilike, inArray } from "drizzle-orm";
 import { ReceiveStockInput } from "@/lib/validators/inventory-validator";
 
 export const receiveStock = async ({
@@ -130,13 +130,12 @@ export const getInventoryMovements = async () => {
 };
 
 export const getInventoryStats = async () => {
-  // Calculate total inventory value (sum of IN movements)
+  // Calculate total inventory value (sum of IN movements minus sum of OUT movements)
   const valueResult = await db
     .select({
-      totalValue: sql<string>`CAST(SUM(CAST(${inventoryMovements.unitCost} AS DECIMAL) * ${inventoryMovements.quantity}) AS DECIMAL)`,
+      totalValue: sql<string>`CAST(COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) * ${inventoryMovements.quantity} ELSE -CAST(${inventoryMovements.unitCost} AS DECIMAL) * ${inventoryMovements.quantity} END), 0) AS DECIMAL)`,
     })
-    .from(inventoryMovements)
-    .where(eq(inventoryMovements.type, "IN"));
+    .from(inventoryMovements);
 
   // Calculate total units (count available product items + sum of non-serialized IN - OUT)
   const serializedUnits = await db
@@ -190,6 +189,52 @@ export const getStockSummary = async () => {
     })
     .from(products)
     .leftJoin(inventoryMovements, eq(products.id, inventoryMovements.productId))
+    .groupBy(products.id, products.name, products.isSerialized);
+
+  return stockData.map((item) => ({
+    productId: item.productId,
+    productName: item.productName,
+    stockTotal: (item.totalIn || 0) - (item.totalOut || 0),
+    avgCost: item.avgCost || 0,
+    status: (item.totalIn || 0) - (item.totalOut || 0) < 5 ? "low" : "ok",
+  }));
+};
+
+export const searchInventoryStock = async (query: string) => {
+  const cleanQuery = query.trim();
+
+  // Find products matching by name, SKU or having a related serialNumber matching the query
+  const matchingProductIdsQuery = await db
+    .select({ id: products.id })
+    .from(products)
+    .leftJoin(productItems, eq(products.id, productItems.productId))
+    .where(
+      or(
+        ilike(products.name, `%${cleanQuery}%`),
+        ilike(products.sku, `%${cleanQuery}%`),
+        ilike(productItems.serialNumber, `%${cleanQuery}%`),
+      ),
+    )
+    .groupBy(products.id);
+
+  const matchedIds = matchingProductIdsQuery.map((p) => p.id);
+
+  if (matchedIds.length === 0) {
+    return [];
+  }
+
+  const stockData = await db
+    .select({
+      productId: products.id,
+      productName: products.name,
+      isSerialized: products.isSerialized,
+      totalIn: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
+      totalOut: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'OUT' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
+      avgCost: sql<number>`COALESCE(AVG(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) END), 0)`,
+    })
+    .from(products)
+    .leftJoin(inventoryMovements, eq(products.id, inventoryMovements.productId))
+    .where(inArray(products.id, matchedIds))
     .groupBy(products.id, products.name, products.isSerialized);
 
   return stockData.map((item) => ({

@@ -33,30 +33,25 @@ export const getSalesKPIs = async () => {
   // 1. Total Income (Revenue) for current month
   const revenueResult = await db
     .select({
-      total: sql<number>`COALESCE(SUM(${sales.totalAmount}), 0)`,
+      total: sql<number>`COALESCE(SUM(CAST(${sales.totalAmount} AS DECIMAL)), 0)`,
     })
     .from(sales)
     .where(and(gte(sales.createdAt, start), lte(sales.createdAt, end)));
 
   // 2. Inventory Value Sold (COGS approx) for current month
-  // Note: relying on inventoryMovements type='OUT'
+  // Note: reading from saleDetails unitCost
   const cogsResult = await db
     .select({
-      total: sql<number>`COALESCE(SUM(${inventoryMovements.quantity} * ${inventoryMovements.unitCost}), 0)`,
+      total: sql<number>`COALESCE(SUM(CAST(${saleDetails.unitCost} AS DECIMAL)), 0)`,
     })
-    .from(inventoryMovements)
-    .where(
-      and(
-        eq(inventoryMovements.type, "OUT"),
-        gte(inventoryMovements.createdAt, start),
-        lte(inventoryMovements.createdAt, end),
-      ),
-    );
+    .from(saleDetails)
+    .innerJoin(sales, eq(saleDetails.saleId, sales.id))
+    .where(and(gte(sales.createdAt, start), lte(sales.createdAt, end)));
 
   // 3. Total Expenses for current month
   const expensesResult = await db
     .select({
-      total: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+      total: sql<number>`COALESCE(SUM(CAST(${expenses.amount} AS DECIMAL)), 0)`,
     })
     .from(expenses)
     .where(and(gte(expenses.date, start), lte(expenses.date, end)));

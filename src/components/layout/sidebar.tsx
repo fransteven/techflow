@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const navItems = [
   {
     title: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
@@ -56,11 +56,6 @@ const navItems = [
     title: "Gastos",
     href: "/expenses",
     icon: Banknote,
-  },
-  {
-    title: "Configuración",
-    href: "/settings",
-    icon: Settings,
   },
 ];
 

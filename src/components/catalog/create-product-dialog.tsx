@@ -185,9 +185,14 @@ export function CreateProductDialog() {
                             type="number"
                             placeholder={attr.label}
                             {...field}
+                            value={field.value ?? ""}
                           />
                         ) : (
-                          <Input placeholder={attr.label} {...field} />
+                          <Input
+                            placeholder={attr.label}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         )}
                       </FormControl>
                       <FormMessage />

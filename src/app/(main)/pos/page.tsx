@@ -119,13 +119,12 @@ export default function PosPage() {
     (acc, item) => acc + item.price * item.quantity,
     0,
   );
-  const tax = subtotal * 0.16; // 16% example
-  const total = subtotal + tax;
+  const total = subtotal;
 
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16)-1px)] gap-6 -m-4 p-4">
+    <div className="flex h-[calc(100vh-(--spacing(16))-1px)] gap-6 -m-4 p-4">
       {/* Left Column: Product Search & Table */}
-      <div className="flex-[3] min-w-0 bg-card rounded-xl border p-6 flex flex-col shadow-sm">
+      <div className="flex-3 min-w-0 bg-card rounded-xl border p-6 flex flex-col shadow-sm">
         <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5" />
           Terminal de Ventas
@@ -134,7 +133,7 @@ export default function PosPage() {
       </div>
 
       {/* Right Column: Dynamic Cart */}
-      <div className="flex-[2] min-w-[380px] max-w-[500px] flex flex-col bg-card border rounded-xl shadow-sm overflow-hidden">
+      <div className="flex-2 min-w-[380px] max-w-[500px] flex flex-col bg-card border rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b bg-muted/30">
           <h3 className="font-semibold flex items-center gap-2">
             Carrito de Compras
@@ -211,10 +210,6 @@ export default function PosPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IVA (16%)</span>
-              <span className="font-medium">{formatCurrency(tax)}</span>
             </div>
             <Separator className="my-2" />
             <div className="flex justify-between text-2xl font-black text-primary">

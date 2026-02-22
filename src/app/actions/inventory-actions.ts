@@ -6,6 +6,7 @@ import {
   getInventoryItems,
   getInventoryMovements,
   getProductSerials,
+  searchInventoryStock,
 } from "@/services/inventory-service";
 import { receiveStockSchema } from "@/lib/validators/inventory-validator";
 
@@ -90,5 +91,15 @@ export async function getProductSerialsAction(productId: string) {
   } catch (error) {
     console.error("Error fetching product serials:", error);
     return { success: false, error: "Failed to fetch product serials" };
+  }
+}
+
+export async function searchInventoryAction(query: string) {
+  try {
+    const data = await searchInventoryStock(query);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error searching inventory:", error);
+    return { success: false, error: "Failed to search inventory" };
   }
 }
