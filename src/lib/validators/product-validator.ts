@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  sku: z.string().optional(),
   categoryId: z.string().optional(),
   description: z.string().optional(),
   price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
