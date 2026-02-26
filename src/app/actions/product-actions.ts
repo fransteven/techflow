@@ -24,19 +24,23 @@ export async function createProductAction(data: unknown) {
       }
     }
 
-    // 2. Generate Base SKU
-    const { generateBaseSKU } = await import("@/lib/utils");
-    const baseSKU = generateBaseSKU(
-      categoryName,
-      result.data.name,
-      result.data.attributes,
-    );
+    // 2. Determinar el SKU final (Reciclado vs Autogenerado)
+    let finalSKU = "";
 
-    // 3. Add Unique Suffix (3-4 chars random)
-    // Math.random gives 0.xxxx. toString(36) gives 0.alphanum.
-    // Substring(2, 6) gives 4 chars.
-    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const finalSKU = `${baseSKU}-${suffix}`;
+    if (result.data.sku && result.data.sku.trim() !== "") {
+      // Usar el código de barras escaneado de fábrica
+      finalSKU = result.data.sku.trim();
+    } else {
+      // Generar SKU interno si no se proporcionó código de barras
+      const { generateBaseSKU } = await import("@/lib/utils");
+      const baseSKU = generateBaseSKU(
+        categoryName,
+        result.data.name,
+        result.data.attributes,
+      );
+      const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      finalSKU = `${baseSKU}-${suffix}`;
+    }
 
     // 4. Create Product with SKU
     await productService.createProduct({

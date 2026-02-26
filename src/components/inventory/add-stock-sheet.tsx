@@ -110,12 +110,18 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
 
       // Prepare print data
       if (result.type === "serialized") {
-        setPrintData({ type: "serialized", items: result.items });
+        setPrintData({
+          type: "serialized",
+          productName: selectedProduct?.name || "Producto Genérico",
+          items: result.items,
+          price: selectedProduct?.price || 0,
+        });
       } else if (result.type === "generic") {
         setPrintData({
           type: "generic",
           product: result.product,
           quantity: result.quantity || values.quantity,
+          price: selectedProduct?.price || 0,
         });
       }
 

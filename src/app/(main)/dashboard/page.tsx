@@ -7,7 +7,12 @@ import {
 } from "@/components/ui/card";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
 
-export default function DashboardPage() {
+import { getDashboardKPIs, getRecentSales } from "@/services/dashboard-service";
+
+export default async function DashboardPage() {
+  const kpis = await getDashboardKPIs();
+  const recentSales = await getRecentSales(5);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between space-y-2">
@@ -22,9 +27,16 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat("es-CO", {
+                style: "currency",
+                currency: "COP",
+                maximumFractionDigits: 0,
+              }).format(kpis.sales.total)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +20.1% respecto al mes pasado
+              {kpis.sales.growth > 0 ? "+" : ""}
+              {kpis.sales.growth}% respecto al mes pasado
             </p>
           </CardContent>
         </Card>
@@ -36,10 +48,8 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+2350</div>
-            <p className="text-xs text-muted-foreground">
-              +180.1% respecto al mes pasado
-            </p>
+            <div className="text-2xl font-bold">{kpis.reservations.active}</div>
+            <p className="text-xs text-muted-foreground">Reservas en curso</p>
           </CardContent>
         </Card>
         <Card>
@@ -50,9 +60,9 @@ export default function DashboardPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,234</div>
+            <div className="text-2xl font-bold">{kpis.products.total}</div>
             <p className="text-xs text-muted-foreground">
-              +19% respecto al mes pasado
+              Productos en el catálogo
             </p>
           </CardContent>
         </Card>
@@ -62,9 +72,9 @@ export default function DashboardPage() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">573</div>
+            <div className="text-2xl font-bold">{kpis.pickups.pending}</div>
             <p className="text-xs text-muted-foreground">
-              +201 desde la última hora
+              Equipos de inventario en reserva
             </p>
           </CardContent>
         </Card>
@@ -84,32 +94,38 @@ export default function DashboardPage() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Ventas Recientes</CardTitle>
-            <CardDescription>Hubo 265 ventas este mes.</CardDescription>
+            <CardDescription>
+              Hubo {recentSales.length} ventas recientemente.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              <div className="flex items-center">
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Olivia Martin
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    olivia.martin@email.com
-                  </p>
+              {recentSales.map((sale) => (
+                <div key={sale.id} className="flex items-center">
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {sale.customerName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {sale.customerEmail}
+                    </p>
+                  </div>
+                  <div className="ml-auto font-medium">
+                    +
+                    {new Intl.NumberFormat("es-CO", {
+                      style: "currency",
+                      currency: "COP",
+                      maximumFractionDigits: 0,
+                    }).format(sale.totalAmount)}
+                  </div>
                 </div>
-                <div className="ml-auto font-medium">+$1,999.00</div>
-              </div>
-              <div className="flex items-center">
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Jackson Lee
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    jackson.lee@email.com
-                  </p>
+              ))}
+
+              {recentSales.length === 0 && (
+                <div className="text-center text-sm text-muted-foreground py-4">
+                  No hay ventas registradas.
                 </div>
-                <div className="ml-auto font-medium">+$39.00</div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>

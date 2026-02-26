@@ -66,6 +66,7 @@ export function CreateProductDialog() {
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
+      sku: "",
       description: "",
       price: "0",
       categoryId: "",
@@ -116,6 +117,27 @@ export function CreateProductDialog() {
                   <FormControl>
                     <Input placeholder="iPhone 15 Pro" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sku"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código de Barras (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Escanear código de fábrica o dejar vacío"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Para accesorios, escanea el código de la caja. Si lo dejas
+                    vacío, el sistema generará uno.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
