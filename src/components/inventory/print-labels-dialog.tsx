@@ -65,7 +65,7 @@ export function PrintLabelsDialog({
         rows.push({
           Nombre_Producto: data.productName,
           Precio_Venta: formatPrice(data.price),
-          Codigo_Identificador: item.id,
+          Codigo_Identificador: item.serialNumber || "N/A",
         });
       });
     } else if (data.type === "generic" && data.product.sku) {
