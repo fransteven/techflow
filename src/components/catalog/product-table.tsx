@@ -37,90 +37,123 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ProductWithStock } from "@/services/product-service";
 import { toast } from "sonner";
-
-export const columns: ColumnDef<ProductWithStock>[] = [
-  {
-    accessorKey: "name",
-    header: "Nombre",
-    cell: ({ row }) => <div className="font-bold">{row.getValue("name")}</div>,
-  },
-  {
-    accessorKey: "categoryName",
-    header: "Categoría",
-    cell: ({ row }) => (
-      <div>{row.getValue("categoryName") || "Sin categoría"}</div>
-    ),
-  },
-  {
-    accessorKey: "price",
-    header: "Precio",
-    cell: ({ row }) => {
-      const price = parseFloat(row.getValue("price"));
-      return <div className="font-medium">{formatCurrency(price)}</div>;
-    },
-  },
-  {
-    accessorKey: "isSerialized",
-    header: "Tipo",
-    cell: ({ row }) => {
-      const isSerialized = row.getValue("isSerialized");
-      return (
-        <Badge variant={isSerialized ? "secondary" : "default"}>
-          {isSerialized ? "Serializado" : "Estándar"}
-        </Badge>
-      );
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const product = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menú</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                // Implement Edit Logic invocation here or navigation
-                toast.info(`Editar producto: ${product.name}`);
-              }}
-            >
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                // Implement View Movements logic
-                toast.info(`Ver movimientos de: ${product.name}`);
-              }}
-            >
-              Ver Movimientos
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
-
+import { EditProductDialog } from "./edit-product-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteProductAction } from "@/app/actions/product-actions";
 interface ProductTableProps {
   data: ProductWithStock[];
 }
 
 export function ProductTable({ data }: ProductTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  // States for Edit / Delete Dialogs
+  const [editProduct, setEditProduct] = React.useState<ProductWithStock | null>(null);
+  const [deleteProduct, setDeleteProduct] = React.useState<ProductWithStock | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // Definir columnas dentro del componente para tener acceso al estado
+  const columns: ColumnDef<ProductWithStock>[] = [
+    {
+      accessorKey: "name",
+      header: "Nombre",
+      cell: ({ row }) => <div className="font-bold">{row.getValue("name")}</div>,
+    },
+    {
+      accessorKey: "categoryName",
+      header: "Categoría",
+      cell: ({ row }) => (
+        <div>{row.getValue("categoryName") || "Sin categoría"}</div>
+      ),
+    },
+    {
+      accessorKey: "price",
+      header: "Precio",
+      cell: ({ row }) => {
+        const price = parseFloat(row.getValue("price"));
+        return <div className="font-medium">{formatCurrency(price)}</div>;
+      },
+    },
+    {
+      accessorKey: "isSerialized",
+      header: "Tipo",
+      cell: ({ row }) => {
+        const isSerialized = row.getValue("isSerialized");
+        return (
+          <Badge variant={isSerialized ? "secondary" : "default"}>
+            {isSerialized ? "Serializado" : "Estándar"}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const product = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Abrir menú</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setEditProduct(product)}>
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  toast.info(`Ver movimientos de: ${product.name}`);
+                }}
+              >
+                Ver Movimientos
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeleteProduct(product)}
+                className="text-destructive"
+              >
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  const handleDelete = React.useCallback(async () => {
+    if (!deleteProduct) return;
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteProductAction(deleteProduct.id);
+      if (result.success) {
+        toast.success(result.message || "Producto eliminado exitosamente");
+      } else {
+        toast.error(result.error || "No se pudo eliminar el producto");
+      }
+    } catch (error) {
+      toast.error("Ocurrió un error inesperado al intentar eliminar el producto");
+    } finally {
+      setIsDeleting(false);
+      setDeleteProduct(null);
+    }
+  }, [deleteProduct]);
 
   const table = useReactTable({
     data,
@@ -253,6 +286,40 @@ export function ProductTable({ data }: ProductTableProps) {
           </Button>
         </div>
       </div>
+
+      {editProduct && (
+        <EditProductDialog
+          product={editProduct as any}
+          open={!!editProduct}
+          onOpenChange={(open: boolean) => !open && setEditProduct(null)}
+        />
+      )}
+
+      <AlertDialog open={!!deleteProduct} onOpenChange={(open: boolean) => !open && setDeleteProduct(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el producto <strong>{deleteProduct?.name}</strong> de forma permanente del catálogo.
+              <br/><br/>
+              <strong>Atención:</strong> Si este producto tiene registro de entradas, salidas o stock (seriales) en el inventario, la eliminación será rechazada para mantener la integridad financiera del sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Sí, Eliminar Producto"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

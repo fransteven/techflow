@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { receiveStockAction } from "@/app/actions/inventory-actions";
+import { getOwnersAction, createOwnerAction } from "@/app/actions/owner-actions";
 import { ProductWithStock } from "@/services/product-service";
 
 import { PrintLabelsDialog, PrintData } from "./print-labels-dialog";
@@ -45,17 +46,32 @@ interface AddStockSheetProps {
 
 // Dynamic schema based on product type
 const createFormSchema = (isSerialized: boolean) => {
-  return z.object({
+  const baseSchema = z.object({
     productId: z.string().min(1, "Seleccione un producto."),
     quantity: z.coerce
       .number()
       .int()
       .positive("La cantidad debe ser positiva."),
-    unitCost: z.coerce.number().positive("El costo debe ser positivo."),
+    unitCost: z.coerce.number().min(0, "El costo debe ser positivo o cero."),
     serials: isSerialized
       ? z.array(z.string().min(1, "El IMEI no puede estar vacío"))
       : z.array(z.string()).optional(),
+    ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
+    ownerId: z.string().optional(),
   });
+
+  return baseSchema.refine(
+    (data) => {
+      if (data.ownerType === "consignment" && isSerialized) {
+        return !!data.ownerId && data.ownerId.trim().length > 0 && data.ownerId !== "masterplay";
+      }
+      return true;
+    },
+    {
+      message: "El propietario es requerido.",
+      path: ["ownerId"],
+    },
+  );
 };
 
 type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
@@ -68,6 +84,39 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
     useState<ProductWithStock | null>(null);
   const [imeiCount, setImeiCount] = useState(0);
 
+  const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
+  const [isCreatingOwner, setIsCreatingOwner] = useState(false);
+  const [newOwnerName, setNewOwnerName] = useState("");
+
+  useEffect(() => {
+    async function fetchOwners() {
+      const res = await getOwnersAction();
+      if (res.success && res.data) {
+        setOwners(res.data);
+      }
+    }
+    if (open) {
+      fetchOwners();
+    }
+  }, [open]);
+
+  const handleCreateOwner = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!newOwnerName.trim()) return;
+    setIsCreatingOwner(true);
+    const res = await createOwnerAction({ name: newOwnerName });
+    if (res.success && res.data) {
+      setOwners([res.data, ...owners]);
+      form.setValue("ownerType", "consignment");
+      form.setValue("ownerId", res.data.id);
+      setNewOwnerName("");
+      toast.success("Propietario creado exitosamente");
+    } else {
+      toast.error(res.error || "Error al crear propietario");
+    }
+    setIsCreatingOwner(false);
+  };
+
   const form = useForm<any>({
     resolver: zodResolver(
       createFormSchema(selectedProduct?.isSerialized ?? false),
@@ -77,6 +126,8 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
       quantity: "",
       unitCost: "",
       serials: [],
+      ownerType: "masterplay",
+      ownerId: "masterplay",
     },
   });
 
@@ -100,6 +151,13 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
       quantity: values.quantity,
       unitCost: values.unitCost,
       serials: selectedProduct?.isSerialized ? values.serials : undefined,
+      ownerType: selectedProduct?.isSerialized
+        ? values.ownerType
+        : "masterplay",
+      ownerId:
+        selectedProduct?.isSerialized && values.ownerType === "consignment" && values.ownerId !== "masterplay"
+          ? values.ownerId
+          : undefined,
     });
 
     if (result.success) {
@@ -174,6 +232,8 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                         setImeiCount(0);
                         form.setValue("quantity", "");
                         form.setValue("serials", []);
+                        form.setValue("ownerType", "masterplay");
+                        form.setValue("ownerId", "masterplay");
                       }}
                       defaultValue={field.value}
                     >
@@ -231,7 +291,12 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                     name="unitCost"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Costo Unitario *</FormLabel>
+                        <FormLabel>
+                          {selectedProduct.isSerialized &&
+                          form.watch("ownerType") === "consignment"
+                            ? "Costo Base Acordado *"
+                            : "Costo Unitario *"}
+                        </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -241,12 +306,67 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                           />
                         </FormControl>
                         <FormDescription>
-                          Precio de compra por unidad
+                          {selectedProduct.isSerialized &&
+                          form.watch("ownerType") === "consignment"
+                            ? "Costo sobre el cual se calculará la comisión del 40% (Utilidad = Precio de Venta - Costo Base)"
+                            : "Precio de compra por unidad"}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Consignment / Ownership Selection */}
+                  {selectedProduct.isSerialized && (
+                    <div className="space-y-4 border rounded-md p-4">
+                      <FormField
+                        control={form.control}
+                        name="ownerId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Propietario *</FormLabel>
+                            <Select
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                form.setValue("ownerType", val === "masterplay" ? "masterplay" : "consignment");
+                              }}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="masterplay">Propio (Masterplay)</SelectItem>
+                                {owners.map((owner) => (
+                                  <SelectItem key={owner.id} value={owner.id}>
+                                    {owner.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Input
+                          placeholder="Nombre nuevo propietario"
+                          value={newOwnerName}
+                          onChange={(e) => setNewOwnerName(e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={handleCreateOwner}
+                          disabled={isCreatingOwner || !newOwnerName.trim()}
+                        >
+                          {isCreatingOwner ? "Creando..." : "Crear"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Paso 3: Campos Dinámicos de IMEI (Solo para productos serializados) */}
                   {selectedProduct.isSerialized && imeiCount > 0 && (

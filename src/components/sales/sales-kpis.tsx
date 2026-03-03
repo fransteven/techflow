@@ -12,7 +12,8 @@ interface SalesKPIsProps {
 export function SalesKPIs({ kpis }: SalesKPIsProps) {
   const { monthlyRevenue, monthlyInventoryValueSold, monthlyExpenses } = kpis;
 
-  // "Utilidad Neta del Mes" (Profit) = Revenue - Expenses - COGS (optional, depends on definition)
+
+  // Utilidad neta del mes = ingresos - gastos - costos de ventas
   // User asked for "Vital KPI" -> I'll use "Operating Income" (Ingresos - Gastos)
   // But strictly, Net Profit should also substract cost of goods.
   // Given the COGS issue, I will present "Ingresos vs Gastos" as the vital one.

@@ -107,8 +107,22 @@ export async function updateProductAction(id: string, data: unknown) {
 
     revalidatePath("/dashboard/catalog");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating product:", error);
+
+    const isDuplicateSku =
+      error.code === "23505" ||
+      (error.message &&
+        (error.message.toLowerCase().includes("duplicate key") ||
+          error.message.toLowerCase().includes("unique constraint")));
+
+    if (isDuplicateSku) {
+      return { success: false, error: "Ya existe otro producto con el mismo código de barras (SKU)." };
+    }
+
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to update product" };
   }
 }
@@ -116,13 +130,16 @@ export async function updateProductAction(id: string, data: unknown) {
 export async function deleteProductAction(id: string) {
   try {
     const deleted = await productService.deleteProduct(id);
-    if (!deleted) return { success: false, error: "Product not found" };
+    if (!deleted) return { success: false, error: "Producto no encontrado" };
 
     revalidatePath("/dashboard/catalog");
-    return { success: true };
-  } catch (error) {
+    return { success: true, message: "Producto eliminado exitosamente" };
+  } catch (error: any) {
     console.error("Error deleting product:", error);
-    return { success: false, error: "Failed to delete product" };
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Error interno al intentar eliminar el producto" };
   }
 }
 
