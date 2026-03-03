@@ -6,7 +6,7 @@ import {
   sales,
   saleDetails,
 } from "@/db/schema";
-import { eq, desc, sql, or, ilike, inArray } from "drizzle-orm";
+import { eq, desc, sql, or, ilike, inArray, and } from "drizzle-orm";
 import { ReceiveStockInput } from "@/lib/validators/inventory-validator";
 
 export const receiveStock = async ({
@@ -14,7 +14,12 @@ export const receiveStock = async ({
   quantity,
   unitCost,
   serials,
-}: ReceiveStockInput) => {
+  ownerType = "masterplay",
+  ownerId,
+}: ReceiveStockInput & {
+  ownerType?: "masterplay" | "consignment";
+  ownerId?: string;
+}) => {
   return await db.transaction(async (tx) => {
     // 1. Verificación: Consultar el producto
     const product = await tx.query.products.findFirst({
@@ -48,6 +53,9 @@ export const receiveStock = async ({
             productId,
             serialNumber: serial,
             status: "available",
+            ownerType,
+            ownerId: ownerType === "consignment" ? ownerId : null,
+            baseCost: unitCost.toString(),
           })
           .returning({
             id: productItems.id,
@@ -183,6 +191,7 @@ export const getStockSummary = async () => {
       productId: products.id,
       productName: products.name,
       isSerialized: products.isSerialized,
+      sku: products.sku,
       totalIn: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       totalOut: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'OUT' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       avgCost: sql<number>`COALESCE(AVG(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) END), 0)`,
@@ -194,6 +203,8 @@ export const getStockSummary = async () => {
   return stockData.map((item) => ({
     productId: item.productId,
     productName: item.productName,
+    isSerialized: item.isSerialized,
+    sku: item.sku,
     stockTotal: (item.totalIn || 0) - (item.totalOut || 0),
     avgCost: item.avgCost || 0,
     status: (item.totalIn || 0) - (item.totalOut || 0) < 5 ? "low" : "ok",
@@ -228,6 +239,7 @@ export const searchInventoryStock = async (query: string) => {
       productId: products.id,
       productName: products.name,
       isSerialized: products.isSerialized,
+      sku: products.sku,
       totalIn: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       totalOut: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'OUT' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       avgCost: sql<number>`COALESCE(AVG(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) END), 0)`,
@@ -240,6 +252,8 @@ export const searchInventoryStock = async (query: string) => {
   return stockData.map((item) => ({
     productId: item.productId,
     productName: item.productName,
+    isSerialized: item.isSerialized,
+    sku: item.sku,
     stockTotal: (item.totalIn || 0) - (item.totalOut || 0),
     avgCost: item.avgCost || 0,
     status: (item.totalIn || 0) - (item.totalOut || 0) < 5 ? "low" : "ok",
@@ -258,4 +272,33 @@ export const getProductSerials = async (productId: string) => {
     .from(productItems)
     .where(eq(productItems.productId, productId))
     .orderBy(desc(productItems.createdAt));
+};
+
+/**
+ * Calcula el Costo Promedio Ponderado (WAC) de un producto no serializado.
+ * Ecuación: Suma(Cantidad * Costo Unitario) / Suma(Cantidad) para todos los movimientos IN.
+ */
+export const calculateProductWAC = async (productId: string, txObj?: any): Promise<number> => {
+  const dbInstance = txObj || db;
+  const result = await dbInstance
+    .select({
+      totalQuantity: sql<number>`COALESCE(SUM(${inventoryMovements.quantity}), 0)`.mapWith(Number),
+      totalValue: sql<number>`COALESCE(SUM(${inventoryMovements.quantity} * CAST(${inventoryMovements.unitCost} AS DECIMAL)), 0)`.mapWith(Number),
+    })
+    .from(inventoryMovements)
+    .where(
+      and(
+        eq(inventoryMovements.productId, productId),
+        eq(inventoryMovements.type, "IN")
+      )
+    );
+
+  const data = result[0];
+
+  if (!data || data.totalQuantity === 0) {
+    return 0; // Fallback de seguridad si no hay historial de compras
+  }
+
+  // Retornar el promedio redondeado a 2 decimales
+  return Number((data.totalValue / data.totalQuantity).toFixed(2));
 };

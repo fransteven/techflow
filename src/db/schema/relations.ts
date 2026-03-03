@@ -6,6 +6,7 @@ import {
   productItems,
   inventoryMovements,
   reservations,
+  owners,
 } from "./inventory";
 import { sales, saleDetails } from "./sales";
 import { expenseCategories, expenses } from "./expenses";
@@ -31,11 +32,19 @@ export const productItemsRelations = relations(
       fields: [productItems.productId],
       references: [products.id],
     }),
+    owner: one(owners, {
+      fields: [productItems.ownerId],
+      references: [owners.id],
+    }),
     saleDetails: many(saleDetails),
     inventoryMovements: many(inventoryMovements),
     reservations: many(reservations),
   }),
 );
+
+export const ownersRelations = relations(owners, ({ many }) => ({
+  productItems: many(productItems),
+}));
 
 export const inventoryMovementsRelations = relations(
   inventoryMovements,

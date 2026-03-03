@@ -16,6 +16,8 @@ export const getProducts = async () => {
       id: products.id,
       name: products.name,
       description: products.description,
+      sku: products.sku,
+      categoryId: products.categoryId,
       price: products.price,
       isSerialized: products.isSerialized,
       createdAt: products.createdAt,
@@ -89,6 +91,32 @@ export const updateProduct = async (
 };
 
 export const deleteProduct = async (id: string) => {
+  // 1. Verificación de Integridad: No podemos borrar si hay inventario asociado
+  const hasInventory = await db
+    .select({ id: inventoryMovements.id })
+    .from(inventoryMovements)
+    .where(eq(inventoryMovements.productId, id))
+    .limit(1);
+
+  if (hasInventory.length > 0) {
+    throw new Error(
+      "No se puede eliminar el producto porque tiene movimientos de inventario asociados. Borrarlo alteraría el historial financiero y de stock.",
+    );
+  }
+
+  const hasItems = await db
+    .select({ id: productItems.id })
+    .from(productItems)
+    .where(eq(productItems.productId, id))
+    .limit(1);
+
+  if (hasItems.length > 0) {
+    throw new Error(
+      "No se puede eliminar el producto porque tiene seriales/IMEIs registrados en el sistema.",
+    );
+  }
+
+  // Si pasamos las validaciones, procedemos con el borrado
   const result = await db
     .delete(products)
     .where(eq(products.id, id))

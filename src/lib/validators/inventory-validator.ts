@@ -3,18 +3,22 @@ import { z } from "zod";
 export const receiveStockSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().positive("Quantity must be a positive number"),
-  unitCost: z.number().positive("Unit cost must be a positive number"),
+  unitCost: z.number().min(0, "Unit cost must be a positive number or zero"),
   serials: z.array(z.string().min(1)).optional(),
+  ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
+  ownerId: z.string().uuid().optional(),
 });
 
 // Schema for the UI Form (client-side)
 export const receiveStockFormSchema = z.object({
   productId: z.string().min(1, "Seleccione un producto."),
-  unitCost: z.coerce.number().positive("El costo debe ser positivo."),
+  unitCost: z.coerce.number().min(0, "El costo debe ser positivo o cero."),
   serials: z.string().min(3, {
     message: "Ingrese al menos un serial.",
   }),
   notes: z.string().optional(),
+  ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
+  ownerId: z.string().uuid("Seleccione un propietario").optional(),
 });
 
 export type ReceiveStockFormValues = z.infer<typeof receiveStockFormSchema>;

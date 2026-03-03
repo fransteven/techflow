@@ -55,17 +55,17 @@ export function PrintLabelsDialog({
     if (!data) return;
 
     const rows: Array<{
-      Nombre_Producto: string;
-      Precio_Venta: string;
-      Codigo_Identificador: string;
+      Producto: string;
+      Precio: string;
+      Codigo: string;
     }> = [];
 
     if (data.type === "serialized") {
       data.items.forEach((item) => {
         rows.push({
-          Nombre_Producto: data.productName,
-          Precio_Venta: formatPrice(data.price),
-          Codigo_Identificador: item.serialNumber || "N/A",
+          Producto: data.productName,
+          Precio: formatPrice(data.price),
+          Codigo: item.serialNumber || "N/A",
         });
       });
     } else if (data.type === "generic" && data.product.sku) {
@@ -75,9 +75,9 @@ export function PrintLabelsDialog({
 
       for (let i = 0; i < data.quantity; i++) {
         rows.push({
-          Nombre_Producto: data.product.name,
-          Precio_Venta: formatPrice(data.price),
-          Codigo_Identificador: data.product.sku,
+          Producto: data.product.name,
+          Precio: formatPrice(data.price),
+          Codigo: data.product.sku,
         });
       }
     }

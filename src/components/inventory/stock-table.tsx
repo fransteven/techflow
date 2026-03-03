@@ -18,6 +18,8 @@ import { formatCurrency } from "@/lib/formatters";
 interface StockItem {
   productId: string;
   productName: string | null;
+  sku: string | null;
+  isSerialized: boolean;
   stockTotal: number;
   avgCost: number;
   status: string;
@@ -28,13 +30,11 @@ interface StockTableProps {
 }
 
 export function StockTable({ stock = [] }: StockTableProps) {
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    null,
-  );
+  const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const handleViewDetail = (productId: string) => {
-    setSelectedProductId(productId);
+  const handleViewDetail = (item: StockItem) => {
+    setSelectedProduct(item);
     setDetailOpen(true);
   };
 
@@ -54,14 +54,24 @@ export function StockTable({ stock = [] }: StockTableProps) {
           <TableBody>
             {stock.length > 0 ? (
               stock.map((item) => (
-                <TableRow key={item.productId}>
-                  <TableCell className="font-medium">
+                <TableRow
+                  key={item.productId}
+                  className={item.stockTotal > 0 ? "bg-green-50/50 dark:bg-green-950/20" : ""}
+                >
+                  <TableCell className="font-medium flex items-center gap-2">
                     {item.productName || "N/A"}
+                    {item.stockTotal > 0 && (
+                      <Badge variant="outline" className="text-green-600 border-green-200 dark:border-green-800 dark:text-green-400 bg-green-50 dark:bg-green-900/30 text-[10px] h-5 hidden sm:inline-flex">
+                        Disp
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-center font-mono">
-                    {item.stockTotal}
+                    <span className={item.stockTotal > 0 ? "text-green-600 dark:text-green-400 font-bold" : "text-muted-foreground"}>
+                      {item.stockTotal}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="text-right font-mono text-muted-foreground">
                     {formatCurrency(item.avgCost)}
                   </TableCell>
                   <TableCell className="text-center">
@@ -75,7 +85,7 @@ export function StockTable({ stock = [] }: StockTableProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleViewDetail(item.productId)}
+                      onClick={() => handleViewDetail(item)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Ver Detalle
@@ -94,9 +104,9 @@ export function StockTable({ stock = [] }: StockTableProps) {
         </Table>
       </div>
 
-      {selectedProductId && (
+      {selectedProduct && (
         <ProductDetailSheet
-          productId={selectedProductId}
+          product={selectedProduct}
           open={detailOpen}
           onOpenChange={setDetailOpen}
         />

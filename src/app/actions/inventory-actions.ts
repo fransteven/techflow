@@ -44,6 +44,10 @@ export async function receiveStockAction(
       quantity: validationResult.data.quantity,
       unitCost: validationResult.data.unitCost,
       serials: validationResult.data.serials,
+      ownerType: validationResult.data.ownerType as
+        | "masterplay"
+        | "consignment",
+      ownerId: validationResult.data.ownerId,
     });
 
     revalidatePath("/inventory");

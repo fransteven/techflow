@@ -11,6 +11,7 @@ import type {
   ProductSearchResult,
   ProcessSaleInput,
 } from "@/lib/validators/pos-validator";
+import { calculateProductWAC } from "@/services/inventory-service";
 
 /**
  * Search for a product by barcode (SKU or serial number)
@@ -95,18 +96,7 @@ export const searchProduct = async (
 
     availableQty = Number(movements[0]?.total || 0);
 
-    const costData = await db
-      .select({
-        avgCost: sql<number>`COALESCE(AVG(CAST(${inventoryMovements.unitCost} AS DECIMAL)), 0)`,
-      })
-      .from(inventoryMovements)
-      .where(
-        and(
-          eq(inventoryMovements.productId, product.id),
-          eq(inventoryMovements.type, "IN"),
-        ),
-      );
-    avgUnitCost = Number(costData[0]?.avgCost || 0);
+    avgUnitCost = await calculateProductWAC(product.id, db);
   }
 
   return {
@@ -230,20 +220,8 @@ export const processSale = async ({
         }
 
         // MINIMUM PROFIT MARGIN VALIDATION for non-serialized items
-        // Calculate average cost from inventory movements
-        const costData = await tx
-          .select({
-            avgCost: sql<number>`COALESCE(AVG(CAST(${inventoryMovements.unitCost} AS DECIMAL)), 0)`,
-          })
-          .from(inventoryMovements)
-          .where(
-            and(
-              eq(inventoryMovements.productId, item.productId),
-              eq(inventoryMovements.type, "IN"),
-            ),
-          );
-
-        avgUnitCost = Number(costData[0]?.avgCost || 0);
+        // Calculate Weighted Average Cost (WAC) from inventory movements
+        avgUnitCost = await calculateProductWAC(item.productId, tx);
         if (item.price < avgUnitCost) {
           // Get product name for better error message
           const [product] = await tx
@@ -273,6 +251,30 @@ export const processSale = async ({
         }
       }
 
+      // Calculate Commission
+      let commission = 0;
+      if (item.isSerialized && item.productItemId) {
+        // We already fetched productItem earlier:
+        const [productItem] = await tx
+          .select({
+            ownerType: productItems.ownerType,
+            baseCost: productItems.baseCost,
+          })
+          .from(productItems)
+          .where(eq(productItems.id, item.productItemId))
+          .limit(1);
+
+        if (productItem?.ownerType === "consignment") {
+          const baseCost = Number(productItem.baseCost);
+          const salePrice = Number(item.price);
+          const grossProfit = salePrice - baseCost;
+
+          if (grossProfit > 0) {
+            commission = grossProfit * 0.4;
+          }
+        }
+      }
+
       // Insert sale detail
       await tx.insert(saleDetails).values({
         saleId: sale.id,
@@ -282,6 +284,7 @@ export const processSale = async ({
           ? itemCost!.toString()
           : avgUnitCost!.toString(),
         price: item.price.toString(),
+        commissionAmount: commission.toString(),
       });
 
       // If product is serialized, update the product item status to 'sold'
