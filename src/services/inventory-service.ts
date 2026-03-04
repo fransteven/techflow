@@ -268,8 +268,16 @@ export const getProductSerials = async (productId: string) => {
       sku: productItems.sku,
       status: productItems.status,
       createdAt: productItems.createdAt,
+      unitCost: sql<number>`COALESCE(${inventoryMovements.unitCost}, ${productItems.baseCost})`.mapWith(Number),
     })
     .from(productItems)
+    .leftJoin(
+      inventoryMovements,
+      and(
+        eq(productItems.id, inventoryMovements.productItemId),
+        eq(inventoryMovements.type, "IN")
+      )
+    )
     .where(eq(productItems.productId, productId))
     .orderBy(desc(productItems.createdAt));
 };

@@ -39,6 +39,7 @@ interface Serial {
   serialNumber: string | null;
   sku: string | null;
   status: string;
+  unitCost?: string | number | null;
   createdAt: Date;
 }
 
@@ -49,6 +50,15 @@ export function ProductDetailSheet({
 }: ProductDetailSheetProps) {
   const [serials, setSerials] = useState<Serial[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const formatPrice = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return "N/A";
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0,
+    }).format(Number(value));
+  };
 
   useEffect(() => {
     if (open && product?.productId && product.isSerialized) {
@@ -126,6 +136,7 @@ export function ProductDetailSheet({
                     <TableHead>Serial / IMEI</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead>Costo</TableHead>
                     <TableHead>Registro</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -140,6 +151,9 @@ export function ProductDetailSheet({
                         {serial.sku || "—"}
                       </TableCell>
                       <TableCell>{getStatusBadge(serial.status)}</TableCell>
+                      <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
+                        {formatPrice(serial.unitCost)}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {new Date(serial.createdAt).toLocaleDateString(
                           "es-ES"

@@ -43,13 +43,30 @@ export const searchProduct = async (
 
   if (itemResult.length > 0) {
     const { productItem, product } = itemResult[0];
+
+    // Buscamos el costo real de este item específico en sus movimientos de entrada
+    const costMovement = await db
+      .select({
+        unitCost: inventoryMovements.unitCost,
+      })
+      .from(inventoryMovements)
+      .where(
+        and(
+          eq(inventoryMovements.productItemId, productItem.id),
+          eq(inventoryMovements.type, "IN"),
+        ),
+      )
+      .limit(1);
+
+    const itemCost = Number(costMovement[0]?.unitCost || productItem.baseCost || 0);
+
     return {
       productId: product.id,
       productItemId: productItem.id,
       name: product.name,
       suggestedPrice: product.price,
-      availableQty: 1,
-      avgUnitCost: 0, // Se calcula en processSale
+      availableQty: productItem.status === "available" ? 1 : 0,
+      avgUnitCost: itemCost,
       isSerialized: true,
       sku: product.sku, // El SKU de la tabla padre
     };
@@ -85,6 +102,18 @@ export const searchProduct = async (
         ),
       );
     availableQty = Number(availableItems[0]?.count || 0);
+
+    // Calculamos un costo promedio aproximado de los items disponibles
+    const avgCostQuery = await db
+      .select({ avgCost: sql<string>`AVG(${productItems.baseCost})` })
+      .from(productItems)
+      .where(
+        and(
+          eq(productItems.productId, product.id),
+          eq(productItems.status, "available"),
+        ),
+      );
+    avgUnitCost = Number(avgCostQuery[0]?.avgCost || 0);
   } else {
     // Cálculo de stock FIFO para No Serializados
     const movements = await db
@@ -181,7 +210,7 @@ export const processSale = async ({
           )
           .limit(1);
 
-        itemCost = Number(costMovement[0]?.unitCost || 0);
+        itemCost = Number(costMovement[0]?.unitCost || productItem.baseCost || 0);
         if (item.price < itemCost) {
           throw new Error(
             `El precio de venta no puede ser menor al costo del producto. Costo: $${itemCost.toLocaleString()}, Precio ingresado: $${item.price.toLocaleString()}`,
