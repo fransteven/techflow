@@ -52,6 +52,11 @@ export const productItems = pgTable("product_items", {
   baseCost: decimal("base_cost", { precision: 10, scale: 2 })
     .notNull()
     .default("0"),
+
+  // --- CONDICIÓN DE LA INSTANCIA FÍSICA ---
+  conditionDetails: jsonb("condition_details"), // Almacena métricas variables ej: { batteryHealth: 85, grade: 'B' }
+  notes: text("notes"), // Descripciones cualitativas ej: "Rasguño en display"
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

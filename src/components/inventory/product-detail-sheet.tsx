@@ -39,6 +39,8 @@ interface Serial {
   serialNumber: string | null;
   sku: string | null;
   status: string;
+  conditionDetails?: any;
+  notes?: string | null;
   unitCost?: string | number | null;
   createdAt: Date;
 }
@@ -134,6 +136,7 @@ export function ProductDetailSheet({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Serial / IMEI</TableHead>
+                    <TableHead>Condición</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Costo</TableHead>
@@ -146,6 +149,23 @@ export function ProductDetailSheet({
                     <TableRow key={serial.id}>
                       <TableCell className="font-mono font-medium">
                         {serial.serialNumber || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {serial.conditionDetails?.batteryHealth && (
+                            <Badge variant="outline" className="w-fit text-[10px] px-1 h-5">
+                              🔋 {serial.conditionDetails.batteryHealth}%
+                            </Badge>
+                          )}
+                          {serial.notes && (
+                            <span className="text-[10px] text-muted-foreground line-clamp-1 max-w-[120px]" title={serial.notes}>
+                              📝 {serial.notes}
+                            </span>
+                          )}
+                          {!serial.conditionDetails?.batteryHealth && !serial.notes && (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono">
                         {serial.sku || "—"}

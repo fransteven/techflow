@@ -16,9 +16,13 @@ export const receiveStock = async ({
   serials,
   ownerType = "masterplay",
   ownerId,
+  batteryHealth,
+  notes,
 }: ReceiveStockInput & {
   ownerType?: "masterplay" | "consignment";
   ownerId?: string;
+  batteryHealth?: number;
+  notes?: string;
 }) => {
   return await db.transaction(async (tx) => {
     // 1. Verificación: Consultar el producto
@@ -44,6 +48,8 @@ export const receiveStock = async ({
     // 3. Ejecución
     if (product.isSerialized && serials) {
       const createdItems = [];
+      const conditionDetails = batteryHealth ? { batteryHealth } : null;
+
       // Caso Serializado
       for (const serial of serials) {
         // Insertar product item
@@ -56,6 +62,8 @@ export const receiveStock = async ({
             ownerType,
             ownerId: ownerType === "consignment" ? ownerId : null,
             baseCost: unitCost.toString(),
+            conditionDetails,
+            notes: notes || null,
           })
           .returning({
             id: productItems.id,
@@ -268,6 +276,8 @@ export const getProductSerials = async (productId: string) => {
       sku: productItems.sku,
       status: productItems.status,
       createdAt: productItems.createdAt,
+      conditionDetails: productItems.conditionDetails,
+      notes: productItems.notes,
       unitCost: sql<number>`COALESCE(${inventoryMovements.unitCost}, ${productItems.baseCost})`.mapWith(Number),
     })
     .from(productItems)

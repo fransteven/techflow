@@ -32,6 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,8 @@ const createFormSchema = (isSerialized: boolean) => {
     serials: isSerialized
       ? z.array(z.string().min(1, "El IMEI no puede estar vacío"))
       : z.array(z.string()).optional(),
+    batteryHealth: z.coerce.number().min(1).max(100).optional(),
+    notes: z.string().optional(),
     ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
     ownerId: z.string().optional(),
   });
@@ -131,8 +134,6 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
     },
   });
 
-  // ... existing form setup
-
   async function onSubmit(values: FormValues) {
     // Validation for serialized products
     if (selectedProduct?.isSerialized) {
@@ -151,6 +152,8 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
       quantity: values.quantity,
       unitCost: values.unitCost,
       serials: selectedProduct?.isSerialized ? values.serials : undefined,
+      batteryHealth: selectedProduct?.isSerialized ? values.batteryHealth : undefined,
+      notes: selectedProduct?.isSerialized ? values.notes : undefined,
       ownerType: selectedProduct?.isSerialized
         ? values.ownerType
         : "masterplay",
@@ -259,62 +262,99 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
               {/* Paso 2: Inputs Básicos */}
               {selectedProduct && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cantidad *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="Ej: 3"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              const val = parseInt(e.target.value);
-                              setImeiCount(isNaN(val) ? 0 : val);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Número de unidades que están ingresando
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cantidad *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Ej: 3"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                const val = parseInt(e.target.value);
+                                setImeiCount(isNaN(val) ? 0 : val);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="unitCost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {selectedProduct.isSerialized &&
-                          form.watch("ownerType") === "consignment"
-                            ? "Costo Base Acordado *"
-                            : "Costo Unitario *"}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="$0.00"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {selectedProduct.isSerialized &&
-                          form.watch("ownerType") === "consignment"
-                            ? "Costo sobre el cual se calculará la comisión del 40% (Utilidad = Precio de Venta - Costo Base)"
-                            : "Precio de compra por unidad"}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="unitCost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {selectedProduct.isSerialized &&
+                            form.watch("ownerType") === "consignment"
+                              ? "Costo Base *"
+                              : "Costo Unitario *"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="$0.00"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Condición del Equipo (Solo para serializados) */}
+                  {selectedProduct.isSerialized && (
+                    <div className="space-y-4 border rounded-md p-4 bg-muted/30">
+                      <h4 className="font-medium text-sm border-b pb-2">Condición de la Instancia</h4>
+                      <div className="grid grid-cols-1 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="batteryHealth"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Salud de Batería (%)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="Ej: 95"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>Dejar vacío si no aplica</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notas de Estado</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Ej: Pantalla cambiada, rayón en marco..."
+                                  className="resize-none"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Consignment / Ownership Selection */}
                   {selectedProduct.isSerialized && (

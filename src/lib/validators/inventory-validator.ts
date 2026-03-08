@@ -7,6 +7,9 @@ export const receiveStockSchema = z.object({
   serials: z.array(z.string().min(1)).optional(),
   ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
   ownerId: z.string().uuid().optional(),
+  // Campos de condición para equipos serializados
+  batteryHealth: z.number().min(1).max(100).optional(),
+  notes: z.string().optional(),
 });
 
 // Schema for the UI Form (client-side)
@@ -16,6 +19,7 @@ export const receiveStockFormSchema = z.object({
   serials: z.string().min(3, {
     message: "Ingrese al menos un serial.",
   }),
+  batteryHealth: z.coerce.number().min(1).max(100).optional(),
   notes: z.string().optional(),
   ownerType: z.enum(["masterplay", "consignment"]).default("masterplay"),
   ownerId: z.string().uuid("Seleccione un propietario").optional(),
