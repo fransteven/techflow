@@ -10,6 +10,8 @@ import {
 } from "./inventory";
 import { sales, saleDetails } from "./sales";
 import { expenseCategories, expenses } from "./expenses";
+import { customers } from "./customers";
+import { layaways, layawayDetails } from "./layaways";
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   products: many(products),
@@ -23,6 +25,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   productItems: many(productItems),
   saleDetails: many(saleDetails),
   inventoryMovements: many(inventoryMovements),
+  layawayDetails: many(layawayDetails),
 }));
 
 export const productItemsRelations = relations(
@@ -39,8 +42,37 @@ export const productItemsRelations = relations(
     saleDetails: many(saleDetails),
     inventoryMovements: many(inventoryMovements),
     reservations: many(reservations),
+    layawayDetails: many(layawayDetails),
   }),
 );
+
+// --- RELACIONES NUEVAS: Clientes y Apartados ---
+export const customersRelations = relations(customers, ({ many }) => ({
+  layaways: many(layaways),
+}));
+
+export const layawaysRelations = relations(layaways, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [layaways.customerId],
+    references: [customers.id],
+  }),
+  layawayDetails: many(layawayDetails),
+}));
+
+export const layawayDetailsRelations = relations(layawayDetails, ({ one }) => ({
+  layaway: one(layaways, {
+    fields: [layawayDetails.layawayId],
+    references: [layaways.id],
+  }),
+  product: one(products, {
+    fields: [layawayDetails.productId],
+    references: [products.id],
+  }),
+  productItem: one(productItems, {
+    fields: [layawayDetails.productItemId],
+    references: [productItems.id],
+  }),
+}));
 
 export const ownersRelations = relations(owners, ({ many }) => ({
   productItems: many(productItems),

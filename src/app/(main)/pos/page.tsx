@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { PosProductList } from "@/components/pos/pos-product-list";
+import { CustomerSelector, Customer } from "@/components/pos/customer-selector";
+import { LayawayDialog } from "@/components/pos/layaway-dialog";
 import { toast } from "sonner";
 import { Trash2, CreditCard, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ interface CartItem {
 export default function PosPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const handleAddToCart = (item: CartItem) => {
     setCartItems((prev) => {
@@ -96,6 +99,7 @@ export default function PosPage() {
           isSerialized: item.isSerialized,
         })),
         totalAmount: totalAmount,
+        userId: selectedCustomer?.id, // Enviar el ID del cliente seleccionado
       });
 
       if (response.success) {
@@ -103,6 +107,7 @@ export default function PosPage() {
           description: `Transacción #${response.saleId} registrada exitosamente.`,
         });
         setCartItems([]);
+        setSelectedCustomer(null); // Limpiar cliente tras venta
       } else {
         toast.error("Error al procesar venta", {
           description: response.error,
@@ -134,13 +139,19 @@ export default function PosPage() {
 
       {/* Right Column: Dynamic Cart */}
       <div className="flex-2 min-w-[380px] max-w-[500px] flex flex-col bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/30">
-          <h3 className="font-semibold flex items-center gap-2">
-            Carrito de Compras
-            <Badge variant="secondary" className="rounded-full">
-              {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-            </Badge>
+        <div className="p-4 border-b bg-muted/30 space-y-4">
+          <h3 className="font-semibold flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              Carrito de Compras
+              <Badge variant="secondary" className="rounded-full">
+                {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+              </Badge>
+            </span>
           </h3>
+          <CustomerSelector 
+            selectedCustomer={selectedCustomer}
+            onSelect={setSelectedCustomer}
+          />
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -218,21 +229,33 @@ export default function PosPage() {
             </div>
           </div>
 
-          <Button
-            className="w-full text-lg h-14 font-bold shadow-lg"
-            size="lg"
-            disabled={cartItems.length === 0 || processing}
-            onClick={handleCheckout}
-          >
-            {processing ? (
-              "Procesando..."
-            ) : (
-              <>
-                <CreditCard className="mr-2 h-5 w-5" />
-                Finalizar Venta
-              </>
-            )}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <LayawayDialog 
+              cartItems={cartItems}
+              totalAmount={total}
+              selectedCustomer={selectedCustomer}
+              onSuccess={() => {
+                setCartItems([]);
+                setSelectedCustomer(null);
+              }}
+            />
+
+            <Button
+              className="w-full text-lg h-14 font-bold shadow-lg"
+              size="lg"
+              disabled={cartItems.length === 0 || processing}
+              onClick={handleCheckout}
+            >
+              {processing ? (
+                "Procesando..."
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Cobrar
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

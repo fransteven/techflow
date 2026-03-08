@@ -43,8 +43,8 @@ const navItems = [
     icon: Store,
   },
   {
-    title: "Reservas",
-    href: "/reservations",
+    title: "Apartados",
+    href: "/layaways",
     icon: CalendarClock,
   },
   {

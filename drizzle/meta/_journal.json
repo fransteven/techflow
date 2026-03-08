@@ -36,6 +36,20 @@
       "when": 1772978871022,
       "tag": "0004_fluffy_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772981567325,
+      "tag": "0005_complete_mantis",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772982970992,
+      "tag": "0006_fair_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }
