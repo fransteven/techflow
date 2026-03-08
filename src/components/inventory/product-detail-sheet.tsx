@@ -85,13 +85,15 @@ export function ProductDetailSheet({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
-        return <Badge variant="default">Disponible</Badge>;
+        return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">Disponible</Badge>;
+      case "reserved":
+        return <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-50">Apartado</Badge>;
       case "sold":
         return <Badge variant="secondary">Vendido</Badge>;
       case "defective":
         return <Badge variant="destructive">Defectuoso</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
