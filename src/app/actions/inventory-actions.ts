@@ -44,6 +44,8 @@ export async function receiveStockAction(
       quantity: validationResult.data.quantity,
       unitCost: validationResult.data.unitCost,
       serials: validationResult.data.serials,
+      batteryHealth: validationResult.data.batteryHealth,
+      notes: validationResult.data.notes,
       ownerType: validationResult.data.ownerType as
         | "masterplay"
         | "consignment",
