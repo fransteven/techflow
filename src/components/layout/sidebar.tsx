@@ -15,6 +15,7 @@ import {
   Menu,
   TrendingUp,
   Banknote,
+  Smartphone,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -46,6 +47,11 @@ const navItems = [
     title: "Apartados",
     href: "/layaways",
     icon: CalendarClock,
+  },
+  {
+    title: "Peritaje iPhones",
+    href: "/iphone-purchase-checklist",
+    icon: Smartphone,
   },
   {
     title: "Ventas",
