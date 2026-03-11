@@ -43,3 +43,11 @@ Para mantener la consistencia en el proyecto, seguimos este flujo estrictamente:
 
 -   Antes de cada cambio significativo, verificar si existen tests o scripts relacionados en `scripts/`.
 -   Mantener `package-lock.json` actualizado tras añadir dependencias.
+
+## 📖 Registro de Progreso Histórico (Development Log)
+
+- **Marzo 2026:**
+  - **Módulo de Apartados (Layaways) completado:** Se implementó una arquitectura financiera que separa abonos de ventas reales usando tablas `customers`, `layaways`, `layaway_details` y `cash_transactions`. Se respetan los principios de causación (el ingreso a utilidades solo ocurre al liquidar el apartado).
+  - **Condición Física en Inventario:** Se añadió el soporte JSONB (`condition_details` y `notes`) a los `productItems` para registrar porcentaje de batería y desgastes estéticos sin romper la herencia del catálogo genérico.
+  - **UI del POS:** Se añadieron componentes avanzados como `CustomerSelector` (creación al vuelo) y `LayawayDialog` en el terminal de ventas.
+
