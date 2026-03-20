@@ -129,8 +129,8 @@ export default function PosPage() {
   return (
     <div className="flex h-[calc(100vh-(--spacing(16))-1px)] gap-6 -m-4 p-4">
       {/* Left Column: Product Search & Table */}
-      <div className="flex-3 min-w-0 bg-card rounded-xl border p-6 flex flex-col shadow-sm">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+      <div className="flex-3 min-w-0 bg-white rounded-xl border border-slate-200 p-6 flex flex-col shadow-sm">
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-slate-900">
           <ShoppingCart className="h-5 w-5" />
           Terminal de Ventas
         </h2>
@@ -138,24 +138,27 @@ export default function PosPage() {
       </div>
 
       {/* Right Column: Dynamic Cart */}
-      <div className="flex-2 min-w-[380px] max-w-[500px] flex flex-col bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-muted/30 space-y-4">
-          <h3 className="font-semibold flex items-center justify-between">
+      <div className="flex-2 min-w-[380px] max-w-[500px] flex flex-col bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-4">
+          <h3 className="font-semibold text-slate-800 flex items-center justify-between">
             <span className="flex items-center gap-2">
               Carrito de Compras
-              <Badge variant="secondary" className="rounded-full">
+              <Badge
+                variant="secondary"
+                className="rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-100"
+              >
                 {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
               </Badge>
             </span>
           </h3>
-          <CustomerSelector 
+          <CustomerSelector
             selectedCustomer={selectedCustomer}
             onSelect={setSelectedCustomer}
           />
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="p-3 border-b text-[10px] uppercase font-bold tracking-wider text-muted-foreground grid grid-cols-12 gap-2">
+          <div className="p-3 border-b border-slate-100 text-[10px] uppercase font-semibold tracking-wider text-slate-500 grid grid-cols-12 gap-2">
             <div className="col-span-6">Producto / Especificaciones</div>
             <div className="col-span-2 text-center">Cant.</div>
             <div className="col-span-3 text-right">Subtotal</div>
@@ -164,50 +167,49 @@ export default function PosPage() {
 
           <ScrollArea className="flex-1">
             {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground px-8 text-center">
-                <ShoppingCart className="h-12 w-12 mb-4 opacity-10" />
-                <p className="font-medium">El carrito está vacío</p>
-                <p className="text-xs opacity-60">
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 px-8 text-center">
+                <ShoppingCart className="h-12 w-12 mb-4 opacity-20" />
+                <p className="font-medium text-slate-500">El carrito está vacío</p>
+                <p className="text-xs text-slate-400 mt-1">
                   Escanea productos para agregarlos
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col">
+              <div className="flex flex-col divide-y divide-slate-100">
                 {cartItems.map((item, index) => (
                   <div
                     key={`${item.productItemId || item.productId}-${index}`}
-                    className="grid grid-cols-12 gap-2 p-4 text-sm items-center border-b last:border-0 hover:bg-muted/30 transition-colors"
+                    className={`grid grid-cols-12 gap-2 p-4 text-sm items-center hover:bg-slate-50 transition-colors border-l-4 ${item.isSerialized ? "border-l-indigo-400" : "border-l-transparent"}`}
                   >
-                    <div className="col-span-6 font-medium">
+                    <div className="col-span-6 font-medium text-slate-800">
                       <div className="truncate">{item.name}</div>
-                      <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
                         <span className="font-mono">
                           {formatCurrency(item.price)}
                         </span>
                         <span>•</span>
                         <Badge
-                          variant="outline"
-                          className="text-[8px] py-0 px-1 leading-none uppercase"
+                          variant={item.isSerialized ? "default" : "secondary"}
+                          className={`text-[8px] py-0 px-1 leading-none uppercase border-0 ${item.isSerialized ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-100" : "bg-slate-100 text-slate-600 hover:bg-slate-100"}`}
                         >
                           {item.isSerialized ? "Serial" : "Stock"}
                         </Badge>
                       </div>
                     </div>
-                    <div className="col-span-2 text-center font-semibold">
+                    <div className="col-span-2 text-center font-semibold text-slate-700">
                       {item.quantity}
                     </div>
-                    <div className="col-span-3 text-right font-bold">
+                    <div className="col-span-3 text-right font-bold text-slate-900">
                       {formatCurrency(item.price * item.quantity)}
                     </div>
                     <div className="col-span-1 flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      <button
+                        aria-label={`Eliminar ${item.name}`}
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded"
                         onClick={() => handleRemoveItem(index)}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -216,21 +218,21 @@ export default function PosPage() {
           </ScrollArea>
         </div>
 
-        <div className="p-6 bg-muted/30 border-t space-y-4">
+        <div className="p-6 bg-slate-50/50 border-t border-slate-100 space-y-4">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium">{formatCurrency(subtotal)}</span>
+              <span className="text-slate-500">Subtotal</span>
+              <span className="font-medium text-slate-700">{formatCurrency(subtotal)}</span>
             </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between text-2xl font-black text-primary">
+            <Separator className="my-2 bg-slate-200" />
+            <div className="flex justify-between text-2xl font-black text-slate-900">
               <span>TOTAL</span>
               <span>{formatCurrency(total)}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <LayawayDialog 
+            <LayawayDialog
               cartItems={cartItems}
               totalAmount={total}
               selectedCustomer={selectedCustomer}
@@ -241,7 +243,7 @@ export default function PosPage() {
             />
 
             <Button
-              className="w-full text-lg h-14 font-bold shadow-lg"
+              className="w-full text-lg h-14 font-bold shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
               size="lg"
               disabled={cartItems.length === 0 || processing}
               onClick={handleCheckout}

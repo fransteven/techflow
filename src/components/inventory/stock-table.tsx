@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getPaginationRowModel,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -9,11 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Package, SlidersHorizontal } from "lucide-react";
 import { ProductDetailSheet } from "./product-detail-sheet";
 import { formatCurrency } from "@/lib/formatters";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface StockItem {
   productId: string;
@@ -27,81 +35,269 @@ interface StockItem {
 
 interface StockTableProps {
   stock: StockItem[];
+  /** Slot para el componente de búsqueda (se renderiza en el header de la card) */
+  searchSlot?: React.ReactNode;
 }
 
-export function StockTable({ stock = [] }: StockTableProps) {
+function StockStatusBadge({ status, stock }: { status: string; stock: number }) {
+  if (stock <= 0) {
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+        Sin stock
+      </span>
+    );
+  }
+  if (status === "low") {
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+        Bajo Stock
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+      Stock OK
+    </span>
+  );
+}
+
+export function StockTable({ stock = [], searchSlot }: StockTableProps) {
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [globalFilter, setGlobalFilter] = useState("");
 
-  const handleViewDetail = (item: StockItem) => {
-    setSelectedProduct(item);
-    setDetailOpen(true);
-  };
+  const columns = useMemo<ColumnDef<StockItem>[]>(
+    () => [
+      {
+        accessorKey: "productName",
+        header: "Producto",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              {/* Icono de producto */}
+              <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <Package className="h-5 w-5 text-slate-400" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  {item.productName || "N/A"}
+                </div>
+                {item.sku && (
+                  <div className="text-xs text-slate-500">SKU: {item.sku}</div>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "stockTotal",
+        header: "Stock Total",
+        cell: ({ row }) => {
+          const val = row.getValue("stockTotal") as number;
+          return (
+            <span className="text-sm font-medium text-slate-700">
+              {val} {val === 1 ? "unidad" : "unidades"}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "avgCost",
+        header: "Costo Promedio",
+        cell: ({ row }) => (
+          <span className="text-sm text-slate-600">
+            {formatCurrency(row.getValue("avgCost"))}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Estado",
+        cell: ({ row }) => (
+          <StockStatusBadge
+            status={row.getValue("status")}
+            stock={row.original.stockTotal}
+          />
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Acciones</span>,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <button
+              title="Ver detalle"
+              aria-label={`Ver detalle de ${row.original.productName}`}
+              className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded"
+              onClick={() => {
+                setSelectedProduct(row.original);
+                setDetailOpen(true);
+              }}
+            >
+              <Eye className="h-5 w-5" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: stock,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: { globalFilter },
+    onGlobalFilterChange: setGlobalFilter,
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const filteredRows = table.getFilteredRowModel().rows;
+  const totalFiltered = filteredRows.length;
+  const from = totalFiltered === 0 ? 0 : pageIndex * pageSize + 1;
+  const to = Math.min((pageIndex + 1) * pageSize, totalFiltered);
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Producto</TableHead>
-              <TableHead className="text-center">Stock Total</TableHead>
-              <TableHead className="text-right">Costo Promedio</TableHead>
-              <TableHead className="text-center">Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {stock.length > 0 ? (
-              stock.map((item) => (
-                <TableRow
-                  key={item.productId}
-                  className={item.stockTotal > 0 ? "bg-green-50/50 dark:bg-green-950/20" : ""}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Card Header: título + búsqueda */}
+        <div className="px-6 py-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-slate-800">
+            Listado de Inventario
+          </h2>
+          <div className="flex items-center gap-3">
+            {/* Búsqueda: URL-driven si se pasa searchSlot, o local si no */}
+            {searchSlot ?? (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar producto..."
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64 outline-none"
+                />
+                <svg
+                  className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <TableCell className="font-medium flex items-center gap-2">
-                    {item.productName || "N/A"}
-                    {item.stockTotal > 0 && (
-                      <Badge variant="outline" className="text-green-600 border-green-200 dark:border-green-800 dark:text-green-400 bg-green-50 dark:bg-green-900/30 text-[10px] h-5 hidden sm:inline-flex">
-                        Disp
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center font-mono">
-                    <span className={item.stockTotal > 0 ? "text-green-600 dark:text-green-400 font-bold" : "text-muted-foreground"}>
-                      {item.stockTotal}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">
-                    {formatCurrency(item.avgCost)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {item.status === "low" ? (
-                      <Badge variant="destructive">Bajo</Badge>
-                    ) : (
-                      <Badge variant="default">OK</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewDetail(item)}
+                  <path
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtrar
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver Detalle
-                    </Button>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  )),
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-slate-100">
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-6 py-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="p-0">
+                    <EmptyState
+                      icon={Package}
+                      headline="No hay productos en el inventario"
+                      description="Agrega stock para ver los productos aquí"
+                      className="border-0"
+                    />
                   </TableCell>
                 </TableRow>
-              ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+          <div className="text-sm text-slate-500">
+            {totalFiltered === 0 ? (
+              "Sin resultados"
             ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No hay productos en el inventario.
-                </TableCell>
-              </TableRow>
+              <>
+                Mostrando{" "}
+                <span className="font-medium text-slate-700">{from}–{to}</span>{" "}
+                de{" "}
+                <span className="font-medium text-slate-700">{totalFiltered}</span>{" "}
+                productos
+              </>
             )}
-          </TableBody>
-        </Table>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
       </div>
 
       {selectedProduct && (

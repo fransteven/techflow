@@ -5,4 +5,5 @@ export * from "./schema/expenses";
 export * from "./schema/customers";
 export * from "./schema/layaways";
 export * from "./schema/finances";
+export * from "./schema/imports";
 export * from "./schema/relations";

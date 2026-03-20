@@ -137,7 +137,7 @@ export function SalesTable({ data }: SalesTableProps) {
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border">
+      <div className="w-full">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

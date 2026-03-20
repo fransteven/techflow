@@ -2,18 +2,23 @@ import { getExpensesAction } from "@/app/actions/expense-actions";
 import { CreateExpenseModal } from "@/components/expenses/create-expense-modal";
 import { ExpenseCategoryModal } from "@/components/expenses/expense-category-modal";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Banknote } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Banknote } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { KpiCard } from "@/components/ui/kpi-card";
 
 export default async function ExpensesPage() {
   const { success, data, error } = await getExpensesAction();
 
   if (!success || !data) {
     return (
-      <div className="p-8">
-        <div className="rounded-md bg-destructive/15 p-4 text-destructive">
-          Error al cargar gastos: {error}
-        </div>
+      <div className="container mx-auto space-y-8 p-8">
+        <h1 className="text-3xl font-bold tracking-tight">Gastos</h1>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>Error al cargar gastos: {error}</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -27,39 +32,27 @@ export default async function ExpensesPage() {
 
   return (
     <div className="container mx-auto space-y-8 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Gastos</h2>
-          <p className="text-muted-foreground">
-            Gestiona y visualiza los gastos operativos del negocio.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ExpenseCategoryModal />
-          <CreateExpenseModal categories={categories} />
-        </div>
-      </div>
+      <PageHeader
+        title="Gastos"
+        description="Gestiona y visualiza los gastos operativos del negocio."
+        actions={
+          <>
+            <ExpenseCategoryModal />
+            <CreateExpenseModal categories={categories} />
+          </>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Gastos Totales
-            </CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("es-CO", {
-                style: "currency",
-                currency: "COP",
-              }).format(totalExpenses)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total histórico registrado
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          icon={Banknote}
+          title="Gastos Totales"
+          value={new Intl.NumberFormat("es-CO", {
+            style: "currency",
+            currency: "COP",
+          }).format(totalExpenses)}
+          description="Total histórico registrado"
+        />
       </div>
 
       <ExpensesTable data={expenses} />

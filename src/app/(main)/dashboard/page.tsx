@@ -1,84 +1,50 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
-
+import { KpiCard } from "@/components/ui/kpi-card";
 import { getDashboardKPIs, getRecentSales } from "@/services/dashboard-service";
 
 export default async function DashboardPage() {
   const kpis = await getDashboardKPIs();
   const recentSales = await getRecentSales(5);
 
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0,
+    }).format(amount);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      </div>
+      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ventas Totales
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("es-CO", {
-                style: "currency",
-                currency: "COP",
-                maximumFractionDigits: 0,
-              }).format(kpis.sales.total)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {kpis.sales.growth > 0 ? "+" : ""}
-              {kpis.sales.growth}% respecto al mes pasado
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Reservas Activas
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.reservations.active}</div>
-            <p className="text-xs text-muted-foreground">Reservas en curso</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Productos
-            </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.products.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Productos en el catálogo
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Por Retirar</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.pickups.pending}</div>
-            <p className="text-xs text-muted-foreground">
-              Equipos de inventario en reserva
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          icon={DollarSign}
+          title="Ventas Totales"
+          value={formatCurrency(kpis.sales.total)}
+          trend={{ value: kpis.sales.growth }}
+        />
+        <KpiCard
+          icon={Users}
+          title="Reservas Activas"
+          value={kpis.reservations.active}
+          description="Reservas en curso"
+        />
+        <KpiCard
+          icon={Package}
+          title="Total Productos"
+          value={kpis.products.total}
+          description="Productos en el catálogo"
+        />
+        <KpiCard
+          icon={ShoppingCart}
+          title="Por Retirar"
+          value={kpis.pickups.pending}
+          description="Equipos de inventario en reserva"
+        />
       </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
@@ -111,12 +77,7 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                   <div className="ml-auto font-medium">
-                    +
-                    {new Intl.NumberFormat("es-CO", {
-                      style: "currency",
-                      currency: "COP",
-                      maximumFractionDigits: 0,
-                    }).format(sale.totalAmount)}
+                    +{formatCurrency(sale.totalAmount)}
                   </div>
                 </div>
               ))}

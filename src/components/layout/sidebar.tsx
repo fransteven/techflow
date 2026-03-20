@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Banknote,
   Smartphone,
+  PiggyBank,
+  PackageSearch,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -59,9 +61,19 @@ const navItems = [
     icon: TrendingUp,
   },
   {
+    title: "Ganancias",
+    href: "/profits",
+    icon: PiggyBank,
+  },
+  {
     title: "Gastos",
     href: "/expenses",
     icon: Banknote,
+  },
+  {
+    title: "Importaciones",
+    href: "/import-costs",
+    icon: PackageSearch,
   },
 ];
 

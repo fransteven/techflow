@@ -13,19 +13,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Package, Pencil, Trash2, SlidersHorizontal, DollarSign, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/formatters";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -49,8 +40,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteProductAction } from "@/app/actions/product-actions";
+import { EmptyState } from "@/components/ui/empty-state";
+
 interface ProductTableProps {
   data: ProductWithStock[];
+}
+
+const CATEGORY_COLORS = [
+  "bg-violet-100 text-violet-700",
+  "bg-sky-100 text-sky-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-indigo-100 text-indigo-700",
+];
+
+function getCategoryColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
 }
 
 export function ProductTable({ data }: ProductTableProps) {
@@ -59,31 +69,67 @@ export function ProductTable({ data }: ProductTableProps) {
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // States for Edit / Delete Dialogs
   const [editProduct, setEditProduct] = React.useState<ProductWithStock | null>(null);
   const [deleteProduct, setDeleteProduct] = React.useState<ProductWithStock | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
-  // Definir columnas dentro del componente para tener acceso al estado
+  // Stats computed from data
+  const stats = React.useMemo(() => {
+    const totalProducts = data.length;
+    const activeCategories = new Set(data.map((p) => p.categoryId).filter(Boolean)).size;
+    const inventoryValue = data.reduce(
+      (sum, p) => sum + parseFloat(String(p.price)) * (p.stock || 0),
+      0,
+    );
+    return { totalProducts, activeCategories, inventoryValue };
+  }, [data]);
+
   const columns: ColumnDef<ProductWithStock>[] = [
     {
       accessorKey: "name",
       header: "Nombre",
-      cell: ({ row }) => <div className="font-bold">{row.getValue("name")}</div>,
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-slate-400" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+              {item.sku && (
+                <div className="text-xs text-slate-500">SKU: {item.sku}</div>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       accessorKey: "categoryName",
       header: "Categoría",
-      cell: ({ row }) => (
-        <div>{row.getValue("categoryName") || "Sin categoría"}</div>
-      ),
+      cell: ({ row }) => {
+        const name = (row.getValue("categoryName") as string) || "Sin categoría";
+        const colorClass = getCategoryColor(name);
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
+          >
+            {name}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "price",
       header: "Precio",
       cell: ({ row }) => {
         const price = parseFloat(row.getValue("price"));
-        return <div className="font-medium">{formatCurrency(price)}</div>;
+        return (
+          <span className="text-sm font-medium text-slate-700">
+            {formatCurrency(price)}
+          </span>
+        );
       },
     },
     {
@@ -92,7 +138,14 @@ export function ProductTable({ data }: ProductTableProps) {
       cell: ({ row }) => {
         const isSerialized = row.getValue("isSerialized");
         return (
-          <Badge variant={isSerialized ? "secondary" : "default"}>
+          <Badge
+            variant={isSerialized ? "secondary" : "default"}
+            className={
+              isSerialized
+                ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-0"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-100 border-0"
+            }
+          >
             {isSerialized ? "Serializado" : "Estándar"}
           </Badge>
         );
@@ -100,37 +153,28 @@ export function ProductTable({ data }: ProductTableProps) {
     },
     {
       id: "actions",
+      header: () => <span className="sr-only">Acciones</span>,
       cell: ({ row }) => {
         const product = row.original;
-
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setEditProduct(product)}>
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  toast.info(`Ver movimientos de: ${product.name}`);
-                }}
-              >
-                Ver Movimientos
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setDeleteProduct(product)}
-                className="text-destructive"
-              >
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-end gap-1">
+            <button
+              title="Editar"
+              aria-label={`Editar ${product.name}`}
+              className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded"
+              onClick={() => setEditProduct(product)}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              title="Eliminar"
+              aria-label={`Eliminar ${product.name}`}
+              className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded"
+              onClick={() => setDeleteProduct(product)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         );
       },
     },
@@ -172,54 +216,69 @@ export function ProductTable({ data }: ProductTableProps) {
       columnVisibility,
       rowSelection,
     },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const filteredRows = table.getFilteredRowModel().rows;
+  const totalFiltered = filteredRows.length;
+  const from = totalFiltered === 0 ? 0 : pageIndex * pageSize + 1;
+  const to = Math.min((pageIndex + 1) * pageSize, totalFiltered);
+
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4">
-        <Input
-          placeholder="Filtrar por nombre..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columnas <ChevronDown className="ml-2 h-4 w-4" />
+    <>
+      {/* Main Table Card */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Card Header */}
+        <div className="px-6 py-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-slate-800">Listado de Productos</h2>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                onChange={(e) =>
+                  table.getColumn("name")?.setFilterValue(e.target.value)
+                }
+                className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64 outline-none"
+              />
+              <svg
+                className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-slate-600 border-slate-200 bg-slate-50 hover:bg-slate-100 gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtrar
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -227,63 +286,116 @@ export function ProductTable({ data }: ProductTableProps) {
                             header.getContext(),
                           )}
                     </TableHead>
-                  );
-                })}
+                  )),
+                )}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+            </TableHeader>
+            <TableBody className="divide-y divide-slate-100">
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-6 py-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="p-0">
+                    <EmptyState
+                      icon={Package}
+                      headline="No hay productos en el catálogo"
+                      description="Registra un nuevo producto para comenzar"
+                      className="border-0"
+                    />
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+              )}
+            </TableBody>
+          </Table>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+          <div className="text-sm text-slate-500">
+            {totalFiltered === 0 ? (
+              "Sin resultados"
+            ) : (
+              <>
+                Mostrando{" "}
+                <span className="font-medium text-slate-700">{from}–{to}</span>{" "}
+                de{" "}
+                <span className="font-medium text-slate-700">{totalFiltered}</span>{" "}
+                productos
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Footer */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-500">Total Productos</span>
+            <div className="bg-indigo-100 p-2 rounded-full">
+              <Package className="h-5 w-5 text-indigo-600" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.totalProducts}</div>
+          <p className="mt-1 text-xs text-slate-400 font-medium">Productos en el catálogo</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-500">Categorías Activas</span>
+            <div className="bg-violet-100 p-2 rounded-full">
+              <Tag className="h-5 w-5 text-violet-600" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.activeCategories}</div>
+          <p className="mt-1 text-xs text-slate-400 font-medium">Categorías con productos</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-500">Valor de Inventario</span>
+            <div className="bg-green-100 p-2 rounded-full">
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">
+            {formatCurrency(stats.inventoryValue)}
+          </div>
+          <p className="mt-1 text-xs text-slate-400 font-medium">Precio de venta × stock actual</p>
         </div>
       </div>
 
@@ -295,14 +407,21 @@ export function ProductTable({ data }: ProductTableProps) {
         />
       )}
 
-      <AlertDialog open={!!deleteProduct} onOpenChange={(open: boolean) => !open && setDeleteProduct(null)}>
+      <AlertDialog
+        open={!!deleteProduct}
+        onOpenChange={(open: boolean) => !open && setDeleteProduct(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará el producto <strong>{deleteProduct?.name}</strong> de forma permanente del catálogo.
-              <br/><br/>
-              <strong>Atención:</strong> Si este producto tiene registro de entradas, salidas o stock (seriales) en el inventario, la eliminación será rechazada para mantener la integridad financiera del sistema.
+              Esta acción eliminará el producto{" "}
+              <strong>{deleteProduct?.name}</strong> de forma permanente del catálogo.
+              <br />
+              <br />
+              <strong>Atención:</strong> Si este producto tiene registro de entradas, salidas
+              o stock (seriales) en el inventario, la eliminación será rechazada para mantener
+              la integridad financiera del sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -320,6 +439,6 @@ export function ProductTable({ data }: ProductTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

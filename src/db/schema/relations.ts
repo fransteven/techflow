@@ -12,6 +12,7 @@ import { sales, saleDetails } from "./sales";
 import { expenseCategories, expenses } from "./expenses";
 import { customers } from "./customers";
 import { layaways, layawayDetails } from "./layaways";
+import { importCosts } from "./imports";
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   products: many(products),
@@ -26,6 +27,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   saleDetails: many(saleDetails),
   inventoryMovements: many(inventoryMovements),
   layawayDetails: many(layawayDetails),
+  importCosts: many(importCosts),
 }));
 
 export const productItemsRelations = relations(
@@ -139,3 +141,19 @@ export const expensesRelations = relations(expenses, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const importCostsRelations = relations(importCosts, ({ one }) => ({
+  product: one(products, {
+    fields: [importCosts.productId],
+    references: [products.id],
+  }),
+  productItem: one(productItems, {
+    fields: [importCosts.productItemId],
+    references: [productItems.id],
+  }),
+  user: one(user, {
+    fields: [importCosts.userId],
+    references: [user.id],
+  }),
+}));
+

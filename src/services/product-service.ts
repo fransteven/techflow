@@ -48,6 +48,7 @@ export const getProducts = async () => {
         END
       `.mapWith(Number),
       categoryName: categories.name,
+      categoryTemplate: categories.template,
       attributes: products.attributes,
     })
     .from(products)

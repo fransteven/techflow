@@ -54,7 +54,7 @@ export function LayawayDialog({
   const [processing, setProcessing] = useState(false);
   const [deposit, setDeposit] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer" | "card">("cash");
-  
+
   // Por defecto, apartado a 30 días
   const defaultDate = new Date();
   defaultDate.setDate(defaultDate.getDate() + 30);
@@ -115,17 +115,17 @@ export function LayawayDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button 
-          variant="secondary" 
-          className="w-full text-lg h-14 font-bold shadow-sm bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+        <Button
+          variant="outline"
+          className="w-full text-lg h-14 font-bold shadow-sm border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
           size="lg"
           disabled={cartItems.length === 0}
         >
           <Clock className="mr-2 h-5 w-5" />
-          Apartar (Layaway)
+          Apartar
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle>Crear Apartado</DialogTitle>
@@ -140,12 +140,12 @@ export function LayawayDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Valor Total:</span>
               <span className="font-semibold">{formatCurrency(totalAmount)}</span>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <Label htmlFor="deposit" className="text-xs w-24">Abono Inicial</Label>
               <div className="relative flex-1">
@@ -165,7 +165,7 @@ export function LayawayDialog({
 
             <Separator />
 
-            <div className="flex justify-between items-center text-lg font-bold text-primary">
+            <div className="flex justify-between items-center text-lg font-bold text-destructive">
               <span>Saldo Pendiente:</span>
               <span>{formatCurrency(pendingBalance)}</span>
             </div>
@@ -208,7 +208,7 @@ export function LayawayDialog({
           <Button variant="outline" onClick={() => setOpen(false)} disabled={processing}>
             Cancelar
           </Button>
-          <Button onClick={handleCreateLayaway} disabled={processing}>
+          <Button onClick={handleCreateLayaway} disabled={processing} className="bg-amber-500 hover:bg-amber-600 text-white">
             {processing ? "Procesando..." : "Confirmar Apartado"}
           </Button>
         </DialogFooter>

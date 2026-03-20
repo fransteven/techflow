@@ -32,7 +32,7 @@ export function InventoryMovementsTable({
   };
 
   return (
-    <div className="rounded-md border">
+    <div className="w-full">
       <Table>
         <TableHeader>
           <TableRow>

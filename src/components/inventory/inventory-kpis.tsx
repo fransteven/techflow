@@ -1,6 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, DollarSign, AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
 
 interface InventoryKPIsProps {
@@ -13,56 +11,68 @@ interface InventoryKPIsProps {
 
 export function InventoryKPIs({ stats }: InventoryKPIsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Valor Total Inventario
-          </CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {formatCurrency(stats.totalValue)}
+    <div className="grid gap-6 md:grid-cols-3">
+      {/* Valor Total del Inventario */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-slate-500">
+            Valor Total del Inventario
+          </span>
+          <div className="bg-green-100 p-2 rounded-full">
+            <DollarSign className="h-5 w-5 text-green-600" />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Valor de mercancía en bodega
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="text-2xl font-bold text-slate-900">
+          {formatCurrency(stats.totalValue)}
+        </div>
+        <p className="mt-1 text-xs text-slate-400 font-medium">
+          Valor de mercancía en bodega
+        </p>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
+      {/* Unidades Totales */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-slate-500">
             Unidades Totales
-          </CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalUnits}</div>
-          <p className="text-xs text-muted-foreground">Productos disponibles</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Productos Bajos de Stock
-          </CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold">{stats.lowStockCount}</div>
-            {stats.lowStockCount > 0 && (
-              <Badge variant="destructive">¡Alerta!</Badge>
-            )}
+          </span>
+          <div className="bg-blue-100 p-2 rounded-full">
+            <Package className="h-5 w-5 text-blue-600" />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Stock menor a 5 unidades
+        </div>
+        <div className="text-2xl font-bold text-slate-900">
+          {stats.totalUnits.toLocaleString("es-CO")}
+        </div>
+        <p className="mt-1 text-xs text-slate-400 font-medium">
+          Productos disponibles en bodega
+        </p>
+      </div>
+
+      {/* Productos Bajos de Stock */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-slate-500">
+            Productos bajos de stock
+          </span>
+          <div className={`p-2 rounded-full ${stats.lowStockCount > 0 ? "bg-red-100" : "bg-slate-100"}`}>
+            <AlertTriangle
+              className={`h-5 w-5 ${stats.lowStockCount > 0 ? "text-red-600" : "text-slate-400"}`}
+            />
+          </div>
+        </div>
+        <div className="text-2xl font-bold text-slate-900">
+          {stats.lowStockCount}
+        </div>
+        {stats.lowStockCount > 0 ? (
+          <p className="mt-1 text-xs text-red-600 font-semibold">
+            Requiere atención inmediata
           </p>
-        </CardContent>
-      </Card>
+        ) : (
+          <p className="mt-1 text-xs text-slate-400 font-medium">
+            Stock en buen nivel
+          </p>
+        )}
+      </div>
     </div>
   );
 }

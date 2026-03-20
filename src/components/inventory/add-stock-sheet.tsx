@@ -202,9 +202,9 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
     <>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button size="lg">
+          <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
             <Plus className="mr-2 h-4 w-4" />
-            Registrar Entrada / Compra
+            Registrar compra
           </Button>
         </SheetTrigger>
         <SheetContent className="flex flex-col overflow-y-auto sm:max-w-lg">
