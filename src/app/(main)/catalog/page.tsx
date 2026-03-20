@@ -8,7 +8,7 @@ export default async function CatalogPage() {
   const { data: products } = await getProductsAction();
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="space-y-4 p-4">
       <PageHeader
         title="Catálogo"
         description="Gestiona los productos y categorías disponibles en la tienda."
