@@ -133,70 +133,70 @@ export function ProductDetailSheet({
               </div>
             </div>
           ) : serials.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Serial / IMEI</TableHead>
-                    <TableHead>Condición</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Costo</TableHead>
-                    <TableHead>Registro</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {serials.map((serial) => (
-                    <TableRow key={serial.id}>
-                      <TableCell className="font-mono font-medium">
-                        {serial.serialNumber || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {serial.conditionDetails?.batteryHealth && (
-                            <Badge variant="outline" className="w-fit text-[10px] px-1 h-5">
-                              🔋 {serial.conditionDetails.batteryHealth}%
-                            </Badge>
-                          )}
-                          {serial.notes && (
-                            <span className="text-[10px] text-muted-foreground line-clamp-1 max-w-[120px]" title={serial.notes}>
-                              📝 {serial.notes}
-                            </span>
-                          )}
-                          {!serial.conditionDetails?.batteryHealth && !serial.notes && (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {serial.sku || "—"}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(serial.status)}</TableCell>
-                      <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
-                        {formatPrice(serial.unitCost)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {new Date(serial.createdAt).toLocaleDateString(
-                          "es-ES"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {serial.status === "available" && (serial.serialNumber || serial.id) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(serial.serialNumber || serial.id, "Serial")}
-                            title="Copiar para vender en POS"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </TableCell>
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Serial / IMEI</TableHead>
+                      <TableHead>Condición</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Costo</TableHead>
+                      <TableHead>Registro</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {serials.map((serial) => (
+                      <TableRow key={serial.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-medium">
+                              {serial.serialNumber || "N/A"}
+                            </span>
+                            {serial.status === "available" && (serial.serialNumber || serial.id) && (
+                              <button
+                                onClick={() => copyToClipboard(serial.serialNumber || serial.id, "Serial")}
+                                title="Copiar para vender en POS"
+                                className="text-slate-400 hover:text-indigo-600 transition-colors p-0.5 rounded flex-shrink-0"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {serial.conditionDetails?.batteryHealth && (
+                              <Badge variant="outline" className="w-fit text-[10px] px-1 h-5">
+                                🔋 {serial.conditionDetails.batteryHealth}%
+                              </Badge>
+                            )}
+                            {serial.notes && (
+                              <span className="text-[10px] text-muted-foreground line-clamp-1 max-w-[120px]" title={serial.notes}>
+                                📝 {serial.notes}
+                              </span>
+                            )}
+                            {!serial.conditionDetails?.batteryHealth && !serial.notes && (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono">
+                          {serial.sku || "—"}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(serial.status)}</TableCell>
+                        <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
+                          {formatPrice(serial.unitCost)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {new Date(serial.createdAt).toLocaleDateString("es-ES")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-32 border rounded-md">
