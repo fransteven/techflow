@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Testing Tools & E2E
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# AI Agent local configs
+.claude/*.local.json
+.cursor/workspace.json
+
