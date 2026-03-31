@@ -3,6 +3,7 @@ import {
   products,
   productItems,
   inventoryMovements,
+  owners,
   sales,
   saleDetails,
 } from "@/db/schema";
@@ -279,6 +280,8 @@ export const getProductSerials = async (productId: string) => {
       conditionDetails: productItems.conditionDetails,
       notes: productItems.notes,
       unitCost: sql<number>`COALESCE(${inventoryMovements.unitCost}, ${productItems.baseCost})`.mapWith(Number),
+      ownerType: productItems.ownerType,
+      ownerName: owners.name,
     })
     .from(productItems)
     .leftJoin(
@@ -288,6 +291,7 @@ export const getProductSerials = async (productId: string) => {
         eq(inventoryMovements.type, "IN")
       )
     )
+    .leftJoin(owners, eq(productItems.ownerId, owners.id))
     .where(eq(productItems.productId, productId))
     .orderBy(desc(productItems.createdAt));
 };
