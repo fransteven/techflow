@@ -201,19 +201,21 @@ export const getStockSummary = async () => {
       productName: products.name,
       isSerialized: products.isSerialized,
       sku: products.sku,
+      attributes: products.attributes,
       totalIn: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       totalOut: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'OUT' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       avgCost: sql<number>`COALESCE(AVG(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) END), 0)`,
     })
     .from(products)
     .leftJoin(inventoryMovements, eq(products.id, inventoryMovements.productId))
-    .groupBy(products.id, products.name, products.isSerialized);
+    .groupBy(products.id, products.name, products.isSerialized, products.sku, products.attributes);
 
   return stockData.map((item) => ({
     productId: item.productId,
     productName: item.productName,
     isSerialized: item.isSerialized,
     sku: item.sku,
+    attributes: item.attributes,
     stockTotal: (item.totalIn || 0) - (item.totalOut || 0),
     avgCost: item.avgCost || 0,
     status: (item.totalIn || 0) - (item.totalOut || 0) < 5 ? "low" : "ok",
@@ -249,6 +251,7 @@ export const searchInventoryStock = async (query: string) => {
       productName: products.name,
       isSerialized: products.isSerialized,
       sku: products.sku,
+      attributes: products.attributes,
       totalIn: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'IN' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       totalOut: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryMovements.type} = 'OUT' THEN ${inventoryMovements.quantity} ELSE 0 END), 0)`,
       avgCost: sql<number>`COALESCE(AVG(CASE WHEN ${inventoryMovements.type} = 'IN' THEN CAST(${inventoryMovements.unitCost} AS DECIMAL) END), 0)`,
@@ -256,13 +259,14 @@ export const searchInventoryStock = async (query: string) => {
     .from(products)
     .leftJoin(inventoryMovements, eq(products.id, inventoryMovements.productId))
     .where(inArray(products.id, matchedIds))
-    .groupBy(products.id, products.name, products.isSerialized);
+    .groupBy(products.id, products.name, products.isSerialized, products.sku, products.attributes);
 
   return stockData.map((item) => ({
     productId: item.productId,
     productName: item.productName,
     isSerialized: item.isSerialized,
     sku: item.sku,
+    attributes: item.attributes,
     stockTotal: (item.totalIn || 0) - (item.totalOut || 0),
     avgCost: item.avgCost || 0,
     status: (item.totalIn || 0) - (item.totalOut || 0) < 5 ? "low" : "ok",

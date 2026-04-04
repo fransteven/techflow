@@ -246,12 +246,25 @@ export function AddStockSheet({ products }: AddStockSheetProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name}
-                            {product.isSerialized && " (Serializado)"}
-                          </SelectItem>
-                        ))}
+                        {products.map((product) => {
+                          const attrs = product.attributes as Record<string, string> | null;
+                          const attrValues = attrs ? Object.values(attrs).filter(Boolean) : [];
+                          return (
+                            <SelectItem key={product.id} value={product.id}>
+                              <span className="flex flex-col">
+                                <span>
+                                  {product.name}
+                                  {product.isSerialized && " (Serializado)"}
+                                </span>
+                                {attrValues.length > 0 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {attrValues.join(" · ")}
+                                  </span>
+                                )}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

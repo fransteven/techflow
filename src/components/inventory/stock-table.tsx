@@ -36,6 +36,7 @@ interface StockItem {
   productName: string | null;
   sku: string | null;
   isSerialized: boolean;
+  attributes: unknown;
   stockTotal: number;
   avgCost: number;
   status: string;
@@ -81,6 +82,8 @@ export function StockTable({ stock = [], searchSlot }: StockTableProps) {
         header: "Producto",
         cell: ({ row }) => {
           const item = row.original;
+          const attrs = item.attributes as Record<string, string> | null;
+          const attrEntries = attrs ? Object.entries(attrs).filter(([, v]) => v) : [];
           return (
             <div className="flex items-center gap-2 md:gap-3">
               <div className="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -90,7 +93,19 @@ export function StockTable({ stock = [], searchSlot }: StockTableProps) {
                 <div className="text-sm font-semibold text-slate-900 truncate">
                   {item.productName || "N/A"}
                 </div>
-                {item.sku && (
+                {attrEntries.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {attrEntries.map(([, value]) => (
+                      <span
+                        key={value}
+                        className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500"
+                      >
+                        {value}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {item.sku && attrEntries.length === 0 && (
                   <div className="text-xs text-slate-500 truncate">SKU: {item.sku}</div>
                 )}
               </div>
