@@ -7,7 +7,9 @@ import {
   decimal,
   uuid,
   jsonb,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // --- TABLA: Propietarios para Consignación ---
 export const owners = pgTable("owners", {
@@ -25,19 +27,28 @@ export const categories = pgTable("categories", {
   template: jsonb("template"), // Defines attributes: [{ key: "brand", label: "Marca", type: "select", options: [...] }]
 });
 
-export const products = pgTable("products", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  categoryId: uuid("category_id").references(() => categories.id),
-  sku: text("sku").unique(),
-  name: text("name").notNull(),
-  description: text("description"),
-  //Precio de venta sugerido
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  isSerialized: boolean("is_serialized").default(false).notNull(),
-  attributes: jsonb("attributes"), // Stores dynamic values: { brand: "Apple", storage: "256GB" }
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const products = pgTable(
+  "products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    categoryId: uuid("category_id").references(() => categories.id),
+    sku: text("sku").unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    //Precio de venta sugerido
+    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    isSerialized: boolean("is_serialized").default(false).notNull(),
+    attributes: jsonb("attributes"), // Stores dynamic values: { brand: "Apple", storage: "256GB" }
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("products_name_attrs_unique").on(
+      sql`TRIM(LOWER(${table.name}))`,
+      sql`COALESCE((${table.attributes})::text, '')`,
+    ),
+  ],
+);
 
 export const productItems = pgTable("product_items", {
   id: uuid("id").defaultRandom().primaryKey(),

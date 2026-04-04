@@ -5,7 +5,7 @@ import {
   inventoryMovements,
   categories,
 } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, isNull } from "drizzle-orm";
 import { ProductInput } from "@/lib/validators/product-validator";
 
 export type ProductWithStock = Awaited<ReturnType<typeof getProducts>>[number];
@@ -63,14 +63,25 @@ export const getProductById = async (id: string) => {
 };
 
 export const createProduct = async (data: ProductInput & { sku?: string }) => {
+  const attrsJson = data.attributes ? JSON.stringify(data.attributes) : null;
+
   const existingProduct = await db
     .select()
     .from(products)
-    .where(sql`LOWER(${products.name}) = LOWER(${data.name})`)
+    .where(
+      and(
+        sql`TRIM(LOWER(${products.name})) = TRIM(LOWER(${data.name}))`,
+        attrsJson
+          ? sql`COALESCE((${products.attributes})::text, '') = ${attrsJson}`
+          : isNull(products.attributes),
+      ),
+    )
     .limit(1);
 
   if (existingProduct.length > 0) {
-    throw new Error("Ya existe un producto con este nombre.");
+    throw new Error(
+      "Ya existe un producto con este nombre y las mismas especificaciones.",
+    );
   }
 
   const result = await db.insert(products).values(data).returning();
