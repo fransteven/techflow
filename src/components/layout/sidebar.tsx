@@ -20,6 +20,7 @@ import {
   LogOut,
   Menu,
   Wallet,
+  ShoppingCart,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ import { authClient } from "@/lib/auth-client";
 const operacion = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Punto de Venta", href: "/pos", icon: Store },
+  { title: "Compras", href: "/purchases", icon: ShoppingCart },
   { title: "Inventario", href: "/inventory", icon: ClipboardList },
   { title: "Catálogo", href: "/catalog", icon: Package },
   { title: "Apartados", href: "/layaways", icon: CalendarClock },
