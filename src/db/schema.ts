@@ -6,5 +6,6 @@ export * from "./schema/customers";
 export * from "./schema/layaways";
 export * from "./schema/finances";
 export * from "./schema/imports";
+export * from "./schema/purchases";
 export * from "./schema/relations";
 export * from "./schema/cash";

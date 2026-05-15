@@ -49,6 +49,7 @@ const SOURCE_LABELS: Record<string, string> = {
   opening_balance: "Saldo inicial",
   owner_payout: "Pago propietario",
   refund: "Devolución",
+  purchase_payment: "Compra",
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
